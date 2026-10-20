@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MX Lap Timer & 2-Lap Alert</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --accent: #ff6b00;
+      --text: #ffffff;
+      --text-sub: #a0a0a0;
+      --danger: #e53935;
+      --success: #43a047;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 15px;
+    }
+
+    header {
+      text-align: center;
+      padding: 10px 0;
+      border-bottom: 2px solid var(--accent);
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-sub);
+      font-size: 0.9rem;
+    }
+
+    select, input, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+
+    .time-inputs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn-duration {
+      flex: 1;
+      background: #2a2a2a;
+      border: 2px solid #444;
+      font-weight: bold;
+    }
+
+    .btn-duration.active {
+      border-color: var(--accent);
+      background: rgba(255, 107, 0, 0.2);
+      color: var(--accent);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .btn-primary:active {
+      opacity: 0.8;
+    }
+
+    /* Setup Output Info */
+    .calc-info {
+      background: #282828;
+      border-left: 4px solid var(--accent);
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 5px;
+      font-size: 0.95rem;
+    }
+
+    /* Live Timer UI */
+    #timer-display {
+      font-size: 3.8rem;
+      font-weight: 900;
+      font-family: monospace;
+      text-align: center;
+      margin: 10px 0;
+      color: #fff;
+    }
+
+    .alert-banner {
+      display: none;
+      background: var(--danger);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 1.8rem;
+      font-weight: 900;
+      animation: blink 0.8s infinite alternate;
+      margin-bottom: 15px;
+    }
+
+    @keyframes blink {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0.7; transform: scale(0.98); }
+    }
+
+    .big-btn {
+      height: 80px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .btn-lap {
+      background: #1976d2;
+      color: white;
+    }
+
+    .btn-start {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-stop {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Lap List Table */
+    .lap-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .lap-table th, .lap-table td {
+      padding: 8px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+
+    .lap-table th {
+      color: var(--text-sub);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏁 Motocross Timer</h1>
+  </header>
+
+  <!-- SCHERMATA CONFIGURAZIONE -->
+  <div id="setup-screen">
+    <!-- Pista -->
+    <div class="card">
+      <label>1. Seleziona o Aggiungi Pista</label>
+      <select id="track-select" onchange="onTrackChange()">
+        <option value="">-- Seleziona Pista --</option>
+      </select>
+
+      <div id="new-track-form" style="margin-top: 10px;">
+        <input type="text" id="track-name" placeholder="Nome Pista (es. Dorno)">
+        <label>Tempo Medio al Giro</label>
+        <div class="time-inputs">
+          <input type="number" id="lap-min" placeholder="Min" min="0" value="1">
+          <input type="number" id="lap-sec" placeholder="Sec" min="0" max="59" value="55">
+        </div>
+        <button class="btn-primary" onclick="saveTrack()">Salva Pista</button>
+      </div>
+    </div>
+
+    <!-- Manche -->
+    <div class="card">
+      <label>2. Durata Manche</label>
+      <div class="btn-group">
+        <button class="btn-duration active" onclick="setDuration(20, this)">20 MIN</button>
+        <button class="btn-duration" onclick="setDuration(25, this)">25 MIN</button>
+        <button class="btn-duration" onclick="setDuration(30, this)">30 MIN</button>
+      </div>
+
+      <div id="calc-preview" class="calc-info">
+        Seleziona una pista per vedere il calcolo dei <b>-2 giri</b>.
+      </div>
+    </div>
+
+    <button class="btn-primary big-btn btn-start" onclick="startSession()">PRONTO PER PARTERE</button>
+  </div>
+
+  <!-- SCHERMATA CRONOMETRO LIVE -->
+  <div id="live-screen" class="hidden">
+    <div id="alert-box" class="alert-banner">
+      🚨 CARTELLO -2 GIRI ORA! 🚨
+    </div>
+
+    <div class="card" style="text-align: center;">
+      <div style="font-size: 1.1rem; color: var(--accent);" id="live-track-info">Dorno - 30 MIN</div>
+      <div id="timer-display">00:00.0</div>
+      <div style="color: var(--text-sub);" id="target-alert-info">Avviso -2 giri previsto a 26:00</div>
+    </div>
+
+    <button id="main-action-btn" class="big-btn btn-start" onclick="toggleTimer()">AVVIA CRONOMETRO</button>
+    <button id="lap-btn" class="big-btn btn-lap hidden" onclick="recordLap()">GIRO (TRAGUARDO)</button>
+
+    <div class="card">
+      <h3>Giri Completati: <span id="lap-count">0</span></h3>
+      <table class="lap-table">
+        <thead>
+          <tr>
+            <th>Giro</th>
+            <th>Tempo</th>
+            <th>Totale</th>
+          </tr>
+        </thead>
+        <tbody id="lap-list">
+        </tbody>
+      </table>
+    </div>
+
+    <button style="background: #444; margin-top: 20px;" onclick="exitLive()">← Torna alle Impostazioni</button>
+  </div>
+
+  <script>
+    // State Variables
+    let tracks = JSON.parse(localStorage.getItem('mx_tracks')) || [
+      { name: "Ottobiano", lapTimeSec: 115 },
+      { name: "Dorno", lapTimeSec: 120 }
+    ];
+    let selectedDurationMin = 20;
+    let selectedTrack = null;
+    let alertTimeSec = 0;
+
+    // Timer variables
+    let timerInterval = null;
+    let startTime = 0;
+    let elapsedTime = 0;
+    let isRunning = false;
+    let alertSounded = false;
+    let lastLapTime = 0;
+    let lapCounter = 0;
+
+    // Elements
+    const trackSelect = document.getElementById('track-select');
+    const calcPreview = document.getElementById('calc-preview');
+
+    function init() {
+      updateTrackDropdown();
+      calculateTargetAlert();
+    }
+
+    function updateTrackDropdown() {
+      trackSelect.innerHTML = '<option value="">-- Seleziona Pista --</option>';
+      tracks.forEach((t, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.textContent = `${t.name} (${formatTimeSec(t.lapTimeSec)})`;
+        trackSelect.appendChild(opt);
+      });
+    }
+
+    function saveTrack() {
+      const name = document.getElementById('track-name').value.trim();
+      const min = parseInt(document.getElementById('lap-min').value) || 0;
+      const sec = parseInt(document.getElementById('lap-sec').value) || 0;
+      const totalSec = (min * 60) + sec;
+
+      if (!name || totalSec <= 0) {
+        alert("Inserisci un nome valido e un tempo di giro valido.");
+        return;
+      }
+
+      tracks.push({ name, lapTimeSec: totalSec });
+      localStorage.setItem('mx_tracks', JSON.stringify(tracks));
+      updateTrackDropdown();
+      trackSelect.value = tracks.length - 1;
+      onTrackChange();
+
+      // Reset form
+      document.getElementById('track-name').value = '';
+    }
+
+    function onTrackChange() {
+      const idx = trackSelect.value;
+      if (idx !== "") {
+        selectedTrack = tracks[idx];
+      } else {
+        selectedTrack = null;
+      }
+      calculateTargetAlert();
+    }
+
+    function setDuration(min, btn) {
+      selectedDurationMin = min;
+      document.querySelectorAll('.btn-duration').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calculateTargetAlert();
+    }
+
+    function calculateTargetAlert() {
+      if (!selectedTrack) {
+        calcPreview.innerHTML = "Seleziona una pista per vedere il calcolo dei <b>-2 giri</b>.";
+        alertTimeSec = 0;
+        return;
+      }
+
+      const totalMancheSec = selectedDurationMin * 60;
+      const lapSec = selectedTrack.lapTimeSec;
+
+      // Formula: Giri totali = Manche / TempoGiro
+      const estimatedLaps = Math.round(totalMancheSec / lapSec);
+      
+      // Avviso 2 giri prima della fine -> all'inizio dell'ultimo paio di giri
+      const alertLapNumber = estimatedLaps - 2;
+      alertTimeSec = Math.max(0, alertLapNumber * lapSec);
+
+      calcPreview.innerHTML = `
+        Pista: <b>${selectedTrack.name}</b><br>
+        Giri totali stimati: <b>~${estimatedLaps} giri</b><br>
+        Avvisa il nonno al minuto: <b style="color:var(--accent); font-size:1.2rem;">${formatTimeSec(alertTimeSec)}</b>
+      `;
+    }
+
+    function formatTimeSec(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function formatTimeMs(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = Math.floor(totalSec % 60);
+      const tenth = Math.floor((ms % 1000) / 100);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${tenth}`;
+    }
+
+    function startSession() {
+      if (!selectedTrack) {
+        alert("Seleziona una pista prima di iniziare!");
+        return;
+      }
+
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('live-screen').classList.remove('hidden');
+
+      document.getElementById('live-track-info').textContent = `${selectedTrack.name} - ${selectedDurationMin} MIN`;
+      document.getElementById('target-alert-info').textContent = `Avviso -2 giri previsto a ${formatTimeSec(alertTimeSec)}`;
+
+      resetTimer();
+    }
+
+    function exitLive() {
+      if (isRunning) toggleTimer();
+      document.getElementById('live-screen').classList.add('hidden');
+      document.getElementById('setup-screen').classList.remove('hidden');
+    }
+
+    function toggleTimer() {
+      const mainBtn = document.getElementById('main-action-btn');
+      const lapBtn = document.getElementById('lap-btn');
+
+      if (!isRunning) {
+        // Avvia
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(updateTimer, 100);
+        isRunning = true;
+        mainBtn.textContent = "PAUSA / FERMA";
+        mainBtn.className = "big-btn btn-stop";
+        lapBtn.classList.remove('hidden');
+      } else {
+        // Pausa
+        clearInterval(timerInterval);
+        isRunning = false;
+        mainBtn.textContent = "RIPRENDI";
+        mainBtn.className = "big-btn btn-start";
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      elapsedTime = 0;
+      lastLapTime = 0;
+      lapCounter = 0;
+      alertSounded = false;
+
+      document.getElementById('timer-display').textContent = "00:00.0";
+      document.getElementById('lap-count').textContent = "0";
+      document.getElementById('lap-list').innerHTML = "";
+      document.getElementById('alert-box').style.display = "none";
+      
+      const mainBtn = document.getElementById('main-action-btn');
+      mainBtn.textContent = "AVVIA CRONOMETRO";
+      mainBtn.className = "big-btn btn-start";
+      document.getElementById('lap-btn').classList.add('hidden');
+    }
+
+    function updateTimer() {
+      elapsedTime = Date.now() - startTime;
+      document.getElementById('timer-display').textContent = formatTimeMs(elapsedTime);
+
+      // Check alert condition
+      const currentSec = elapsedTime / 1000;
+      if (currentSec >= alertTimeSec && alertTimeSec > 0 && !alertSounded) {
+        alertSounded = true;
+        triggerAlert();
+      }
+    }
+
+    function triggerAlert() {
+      document.getElementById('alert-box').style.display = "block";
+      // Beep acustico (Web Audio API)
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        osc.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.5);
+      } catch(e) {}
+    }
+
+    function recordLap() {
+      if (!isRunning) return;
+
+      lapCounter++;
+      const currentLapDuration = elapsedTime - lastLapTime;
+      lastLapTime = elapsedTime;
+
+      document.getElementById('lap-count').textContent = lapCounter;
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>Giro ${lapCounter}</td>
+        <td><b>${formatTimeMs(currentLapDuration)}</b></td>
+        <td>${formatTimeMs(elapsedTime)}</td>
+      `;
+      
+      const lapList = document.getElementById('lap-list');
+      lapList.insertBefore(row, lapList.firstChild);
+    }
+
+    // Init
+    init();
+  </script>
+</body>
+</html>
