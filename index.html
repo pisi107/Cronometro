@@ -2,374 +2,863 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MX Lap Timer & 2-Lap Alert</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MX Pro Lap Timer & Archive</title>
+  
+  <!-- PWA Meta tags -->
+  <meta name="theme-color" content="#0d0e12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0d0e12',
+              card: '#161922',
+              accent: '#ff5500',
+              accentHover: '#e04b00',
+              fuchsia: '#ff007f', // Ottimo tempo / Best Lap
+              green: '#10b981',   // Buon tempo
+              red: '#ef4444',     // Tempo malino
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    :root {
-      --bg: #121212;
-      --card: #1e1e1e;
-      --accent: #ff6b00;
-      --text: #ffffff;
-      --text-sub: #a0a0a0;
-      --danger: #e53935;
-      --success: #43a047;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Roboto, sans-serif;
-    }
-
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;900&family=Inter:wght@400;600;800&display=swap');
+    
     body {
-      background-color: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      padding: 15px;
+      font-family: 'Inter', sans-serif;
+      background-color: #0d0e12;
+      color: #f3f4f6;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
-    header {
-      text-align: center;
-      padding: 10px 0;
-      border-bottom: 2px solid var(--accent);
-      margin-bottom: 15px;
+    .font-mono-timer {
+      font-family: 'Chakra Petch', monospace;
     }
 
-    h1 {
-      font-size: 1.5rem;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    /* Pulsazioni e Animazione Allarme -2 Giri */
+    @keyframes alertPulse {
+      0% { background-color: #dc2626; transform: scale(1); }
+      50% { background-color: #eab308; transform: scale(1.02); }
+      100% { background-color: #dc2626; transform: scale(1); }
     }
 
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    .animate-alert {
+      animation: alertPulse 0.7s infinite ease-in-out;
     }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--text-sub);
-      font-size: 0.9rem;
+    /* Badge colori tempi */
+    .lap-fuchsia {
+      background-color: rgba(255, 0, 127, 0.15);
+      border-left: 6px solid #ff007f;
+      color: #ff66b2;
+    }
+    .lap-green {
+      background-color: rgba(16, 185, 129, 0.15);
+      border-left: 6px solid #10b981;
+      color: #34d399;
+    }
+    .lap-red {
+      background-color: rgba(239, 68, 68, 0.15);
+      border-left: 6px solid #ef4444;
+      color: #f87171;
     }
 
-    select, input, button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      background: #2a2a2a;
-      color: #fff;
-      font-size: 1.1rem;
-      margin-bottom: 10px;
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
     }
-
-    .time-inputs {
-      display: flex;
-      gap: 10px;
+    ::-webkit-scrollbar-track {
+      background: #161922;
     }
-
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .btn-duration {
-      flex: 1;
-      background: #2a2a2a;
-      border: 2px solid #444;
-      font-weight: bold;
-    }
-
-    .btn-duration.active {
-      border-color: var(--accent);
-      background: rgba(255, 107, 0, 0.2);
-      color: var(--accent);
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      border: none;
-      font-weight: bold;
-      color: #fff;
-      cursor: pointer;
-      text-transform: uppercase;
-    }
-
-    .btn-primary:active {
-      opacity: 0.8;
-    }
-
-    /* Setup Output Info */
-    .calc-info {
-      background: #282828;
-      border-left: 4px solid var(--accent);
-      padding: 10px;
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
       border-radius: 4px;
-      margin-top: 5px;
-      font-size: 0.95rem;
-    }
-
-    /* Live Timer UI */
-    #timer-display {
-      font-size: 3.8rem;
-      font-weight: 900;
-      font-family: monospace;
-      text-align: center;
-      margin: 10px 0;
-      color: #fff;
-    }
-
-    .alert-banner {
-      display: none;
-      background: var(--danger);
-      color: white;
-      text-align: center;
-      padding: 15px;
-      border-radius: 8px;
-      font-size: 1.8rem;
-      font-weight: 900;
-      animation: blink 0.8s infinite alternate;
-      margin-bottom: 15px;
-    }
-
-    @keyframes blink {
-      from { opacity: 1; transform: scale(1); }
-      to { opacity: 0.7; transform: scale(0.98); }
-    }
-
-    .big-btn {
-      height: 80px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-
-    .btn-lap {
-      background: #1976d2;
-      color: white;
-    }
-
-    .btn-start {
-      background: var(--success);
-      color: white;
-    }
-
-    .btn-stop {
-      background: var(--danger);
-      color: white;
-    }
-
-    /* Lap List Table */
-    .lap-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    .lap-table th, .lap-table td {
-      padding: 8px;
-      text-align: center;
-      border-bottom: 1px solid #333;
-    }
-
-    .lap-table th {
-      color: var(--text-sub);
-    }
-
-    .hidden {
-      display: none !important;
     }
   </style>
 </head>
-<body>
+<body class="flex flex-col min-h-screen justify-between pb-6">
 
-  <header>
-    <h1>🏁 Motocross Timer</h1>
+  <!-- TOP HEADER -->
+  <header class="bg-brand-card border-b border-gray-800 p-4 sticky top-0 z-40 shadow-xl">
+    <div class="max-w-xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="bg-brand-accent p-2 rounded-xl text-black font-black text-xl">
+          <i class="fa-solid font-bold fa-flag-checkered"></i>
+        </div>
+        <div>
+          <h1 class="font-black text-xl tracking-wider text-white uppercase font-mono-timer italic">MX TIMER <span class="text-brand-accent">PRO</span></h1>
+          <p class="text-xs text-gray-400 font-semibold">Cronometro Campo & Archive</p>
+        </div>
+      </div>
+      
+      <!-- Quick Navigation Tabs -->
+      <nav class="flex gap-2">
+        <button id="nav-timer-btn" onclick="switchTab('timer')" class="p-3 bg-brand-accent text-black font-bold rounded-xl shadow-lg flex items-center gap-1">
+          <i class="fa-solid fa-stopwatch text-lg"></i>
+        </button>
+        <button id="nav-archive-btn" onclick="switchTab('archive')" class="p-3 bg-gray-800 text-gray-300 font-bold rounded-xl shadow-lg flex items-center gap-1 hover:bg-gray-700">
+          <i class="fa-solid fa-box-archive text-lg"></i>
+        </button>
+        <button id="nav-settings-btn" onclick="switchTab('settings')" class="p-3 bg-gray-800 text-gray-300 font-bold rounded-xl shadow-lg flex items-center gap-1 hover:bg-gray-700">
+          <i class="fa-solid fa-sliders text-lg"></i>
+        </button>
+      </nav>
+    </div>
   </header>
 
-  <!-- SCHERMATA CONFIGURAZIONE -->
-  <div id="setup-screen">
-    <!-- Pista -->
-    <div class="card">
-      <label>1. Seleziona o Aggiungi Pista</label>
-      <select id="track-select" onchange="onTrackChange()">
-        <option value="">-- Seleziona Pista --</option>
-      </select>
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-xl mx-auto w-full p-4 flex-grow">
 
-      <div id="new-track-form" style="margin-top: 10px;">
-        <input type="text" id="track-name" placeholder="Nome Pista (es. Dorno)">
-        <label>Tempo Medio al Giro</label>
-        <div class="time-inputs">
-          <input type="number" id="lap-min" placeholder="Min" min="0" value="1">
-          <input type="number" id="lap-sec" placeholder="Sec" min="0" max="59" value="55">
+    <!-- ================= TAB 1: CRONOMETRO & SETUP ================= -->
+    <section id="tab-timer" class="space-y-4">
+      
+      <!-- SCHERMATA SETUP MANCHE (Visibile quando il timer è fermo) -->
+      <div id="setup-panel" class="space-y-4">
+        
+        <!-- Pilota e Pista Selectors -->
+        <div class="bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md space-y-4">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-user-ninja text-brand-accent"></i> 1. Pilota e Pista
+          </h2>
+
+          <!-- Pilota Dropdown -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">PILOTA ATTIVO</label>
+            <select id="select-rider" onchange="updateCalculationPreview()" class="w-full bg-gray-900 border-2 border-gray-700 text-white rounded-xl p-3 text-lg font-bold focus:border-brand-accent focus:outline-none">
+            </select>
+          </div>
+
+          <!-- Pista Dropdown -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 mb-1">PISTA</label>
+            <select id="select-track" onchange="updateCalculationPreview()" class="w-full bg-gray-900 border-2 border-gray-700 text-white rounded-xl p-3 text-lg font-bold focus:border-brand-accent focus:outline-none">
+            </select>
+          </div>
         </div>
-        <button class="btn-primary" onclick="saveTrack()">Salva Pista</button>
+
+        <!-- Durata Manche Selector -->
+        <div class="bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md space-y-3">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-clock text-brand-accent"></i> 2. Durata Manche
+          </h2>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="setMancheDuration(20, this)" class="btn-duration bg-brand-accent text-black font-black text-xl py-4 rounded-xl border-2 border-brand-accent transition shadow-lg">20 MIN</button>
+            <button onclick="setMancheDuration(25, this)" class="btn-duration bg-gray-800 text-white font-black text-xl py-4 rounded-xl border-2 border-gray-700 transition hover:border-gray-500">25 MIN</button>
+            <button onclick="setMancheDuration(30, this)" class="btn-duration bg-gray-800 text-white font-black text-xl py-4 rounded-xl border-2 border-gray-700 transition hover:border-gray-500">30 MIN</button>
+          </div>
+        </div>
+
+        <!-- Box Calcolo Automatico -2 Giri -->
+        <div class="bg-gray-900 border-l-4 border-brand-accent p-4 rounded-xl shadow-inner space-y-1">
+          <div class="text-xs text-gray-400 font-semibold uppercase">Calcolo Strategia -2 Giri</div>
+          <div id="calc-preview-text" class="text-sm font-bold text-gray-200">
+            Seleziona Pilota e Pista per calcolare l'avviso.
+          </div>
+        </div>
+
+        <!-- Tasto Avvia Sessione -->
+        <button onclick="prepareLiveSession()" class="w-full bg-brand-accent hover:bg-brand-accentHover text-black font-black text-2xl py-5 rounded-2xl shadow-2xl uppercase tracking-wider flex items-center justify-center gap-3 active:scale-95 transition">
+          <i class="fa-solid fa-play text-3xl"></i> Vai al Traguardo
+        </button>
       </div>
+
+      <!-- SCHERMATA CRONOMETRO LIVE (Nascosta inizialmente) -->
+      <div id="live-panel" class="hidden space-y-4">
+        
+        <!-- BANNER ALLARME -2 GIRI -->
+        <div id="alert-banner" class="hidden p-4 rounded-2xl text-center animate-alert text-black font-black shadow-2xl">
+          <div class="text-2xl tracking-wider uppercase"><i class="fa-solid fa-triangle-exclamation"></i> DA' I -2 GIRI ORA! <i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="text-sm font-bold opacity-90">Esporre il cartello sul traguardo</div>
+        </div>
+
+        <!-- Card Display Cronometro -->
+        <div class="bg-brand-card p-5 rounded-3xl border-2 border-gray-800 shadow-2xl text-center relative overflow-hidden">
+          
+          <div class="flex justify-between items-center text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+            <span id="live-rider-tag" class="bg-gray-800 px-3 py-1 rounded-full text-brand-accent">Pilota</span>
+            <span id="live-track-tag" class="bg-gray-800 px-3 py-1 rounded-full text-gray-300">Pista</span>
+          </div>
+
+          <!-- DIGIT CRONOMETRO ENORME PER NONNO -->
+          <div id="timer-display" class="font-mono-timer text-6xl md:text-7xl font-black text-white tracking-tighter my-2 drop-shadow-md">
+            00:00.0
+          </div>
+
+          <!-- Target Info -->
+          <div class="flex justify-around items-center text-xs font-semibold text-gray-400 border-t border-gray-800 pt-3 mt-2">
+            <div>TARGET -2 GIRI: <span id="target-alert-display" class="text-brand-accent font-bold">--:--</span></div>
+            <div>MEDIA RIF.: <span id="ref-time-display" class="text-gray-200 font-bold">--:--</span></div>
+          </div>
+        </div>
+
+        <!-- TASTO GIRO GIGANTE (Traguardo) -->
+        <button id="lap-button" onclick="recordLap()" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white font-black text-4xl py-8 rounded-3xl shadow-2xl uppercase tracking-widest active:scale-95 transition flex flex-col items-center justify-center border-4 border-blue-400/30">
+          <span><i class="fa-solid fa-flag text-3xl mb-1"></i> GIRO</span>
+          <span class="text-xs font-normal tracking-normal text-blue-200">Premi ad ogni passaggio sul traguardo</span>
+        </button>
+
+        <!-- Pulsanti Controllo (Start / Pausa / Termina) -->
+        <div class="grid grid-cols-2 gap-3">
+          <button id="start-pause-btn" onclick="toggleTimer()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-play"></i> AVVIA
+          </button>
+          <button onclick="finishSession()" class="bg-gray-800 hover:bg-gray-700 text-red-400 font-bold text-lg py-4 rounded-2xl shadow-lg uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2 border border-red-900/40">
+            <i class="fa-solid fa-stop"></i> SALVA & ESCE
+          </button>
+        </div>
+
+        <!-- LISTA TEMPI GIRO LIVE -->
+        <div class="bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-gray-300 text-sm uppercase tracking-wider">
+              Giri Completati: <span id="live-lap-count" class="text-brand-accent font-black text-lg">0</span>
+            </h3>
+            <!-- Legenda Colori -->
+            <div class="flex gap-2 text-[10px] font-bold">
+              <span class="text-brand-fuchsia">■ FUCSIA (Top)</span>
+              <span class="text-brand-green">■ VERDE (OK)</span>
+              <span class="text-brand-red">■ ROSSO (+3s)</span>
+            </div>
+          </div>
+
+          <div class="max-h-56 overflow-y-auto space-y-2 pr-1" id="live-lap-list">
+            <div class="text-center text-gray-500 text-xs py-4 italic">Nessun giro ancora registrato. Premi AVVIA e poi GIRO.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= TAB 2: ARCHIVIO HISTORICO ================= -->
+    <section id="tab-archive" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-black text-white italic font-mono-timer uppercase">Archivio Manche</h2>
+        <button onclick="clearArchive()" class="text-xs text-red-400 hover:text-red-300 bg-red-950/40 border border-red-900/50 px-3 py-2 rounded-lg font-semibold">
+          <i class="fa-solid fa-trash"></i> Svuota Archivio
+        </button>
+      </div>
+
+      <!-- Filtro Pilota -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-semibold text-gray-400">FILTRA PILOTA:</label>
+        <select id="archive-filter-rider" onchange="renderArchive()" class="bg-brand-card border border-gray-700 text-white rounded-xl p-2 text-sm font-bold flex-grow">
+          <option value="ALL">Tutti i Piloti</option>
+        </select>
+      </div>
+
+      <!-- Lista Manche Salvate -->
+      <div id="archive-list" class="space-y-3">
+        <!-- Renderizzato via JS -->
+      </div>
+    </section>
+
+
+    <!-- ================= TAB 3: IMPOSTAZIONI (PILOTI & PISTE) ================= -->
+    <section id="tab-settings" class="hidden space-y-6">
+      
+      <!-- GESTIONE PILOTI -->
+      <div class="bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md space-y-4">
+        <h2 class="text-md font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-users"></i> Gestione Piloti
+        </h2>
+
+        <!-- Form Nuovo Pilota -->
+        <div class="flex gap-2">
+          <input type="text" id="new-rider-name" placeholder="Es. Marco #84" class="bg-gray-900 border border-gray-700 text-white p-3 rounded-xl flex-grow font-bold focus:border-brand-accent focus:outline-none">
+          <button onclick="addRider()" class="bg-brand-accent text-black font-bold px-5 py-3 rounded-xl hover:bg-brand-accentHover">
+            Aggiungi
+          </button>
+        </div>
+
+        <!-- Lista Piloti -->
+        <div id="riders-list" class="space-y-2">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- GESTIONE PISTE -->
+      <div class="bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md space-y-4">
+        <h2 class="text-md font-bold text-brand-accent uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-road"></i> Gestione Piste & Tempi Medio
+        </h2>
+
+        <!-- Form Nuova Pista -->
+        <div class="space-y-2">
+          <input type="text" id="new-track-name" placeholder="Nome Pista (es. Dorno)" class="w-full bg-gray-900 border border-gray-700 text-white p-3 rounded-xl font-bold focus:border-brand-accent focus:outline-none">
+          
+          <label class="block text-xs font-semibold text-gray-400">Tempo medio sul giro di riferimento:</label>
+          <div class="flex gap-2">
+            <input type="number" id="new-track-min" placeholder="Minuti" min="0" value="1" class="w-1/2 bg-gray-900 border border-gray-700 text-white p-3 rounded-xl font-bold">
+            <input type="number" id="new-track-sec" placeholder="Secondi" min="0" max="59" value="55" class="w-1/2 bg-gray-900 border border-gray-700 text-white p-3 rounded-xl font-bold">
+          </div>
+
+          <button onclick="addTrack()" class="w-full bg-brand-accent text-black font-bold p-3 rounded-xl hover:bg-brand-accentHover uppercase">
+            Salva Nuova Pista
+          </button>
+        </div>
+
+        <!-- Lista Piste -->
+        <div id="tracks-list" class="space-y-2">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- MODALE DETTAGLIO ARCHIVIO -->
+  <div id="archive-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-brand-card border border-gray-700 w-full max-w-lg rounded-3xl p-5 space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+        <h3 id="modal-title" class="font-black text-lg text-white">Dettaglio Manche</h3>
+        <button onclick="closeModal()" class="text-gray-400 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div id="modal-body" class="overflow-y-auto space-y-3 flex-grow pr-1">
+        <!-- Contenuto dinamico -->
+      </div>
+
+      <button onclick="closeModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl">Chiudi</button>
     </div>
-
-    <!-- Manche -->
-    <div class="card">
-      <label>2. Durata Manche</label>
-      <div class="btn-group">
-        <button class="btn-duration active" onclick="setDuration(20, this)">20 MIN</button>
-        <button class="btn-duration" onclick="setDuration(25, this)">25 MIN</button>
-        <button class="btn-duration" onclick="setDuration(30, this)">30 MIN</button>
-      </div>
-
-      <div id="calc-preview" class="calc-info">
-        Seleziona una pista per vedere il calcolo dei <b>-2 giri</b>.
-      </div>
-    </div>
-
-    <button class="btn-primary big-btn btn-start" onclick="startSession()">PRONTO PER PARTERE</button>
   </div>
 
-  <!-- SCHERMATA CRONOMETRO LIVE -->
-  <div id="live-screen" class="hidden">
-    <div id="alert-box" class="alert-banner">
-      🚨 CARTELLO -2 GIRI ORA! 🚨
-    </div>
 
-    <div class="card" style="text-align: center;">
-      <div style="font-size: 1.1rem; color: var(--accent);" id="live-track-info">Dorno - 30 MIN</div>
-      <div id="timer-display">00:00.0</div>
-      <div style="color: var(--text-sub);" id="target-alert-info">Avviso -2 giri previsto a 26:00</div>
-    </div>
-
-    <button id="main-action-btn" class="big-btn btn-start" onclick="toggleTimer()">AVVIA CRONOMETRO</button>
-    <button id="lap-btn" class="big-btn btn-lap hidden" onclick="recordLap()">GIRO (TRAGUARDO)</button>
-
-    <div class="card">
-      <h3>Giri Completati: <span id="lap-count">0</span></h3>
-      <table class="lap-table">
-        <thead>
-          <tr>
-            <th>Giro</th>
-            <th>Tempo</th>
-            <th>Totale</th>
-          </tr>
-        </thead>
-        <tbody id="lap-list">
-        </tbody>
-      </table>
-    </div>
-
-    <button style="background: #444; margin-top: 20px;" onclick="exitLive()">← Torna alle Impostazioni</button>
-  </div>
-
+  <!-- SCRIPT LOGIC -->
   <script>
-    // State Variables
-    let tracks = JSON.parse(localStorage.getItem('mx_tracks')) || [
-      { name: "Ottobiano", lapTimeSec: 115 },
-      { name: "Dorno", lapTimeSec: 120 }
+    /* ================= APP STATE ================= */
+    let riders = JSON.parse(localStorage.getItem('mx_pwa_riders')) || ["Marco #84", "Luca #12"];
+    let tracks = JSON.parse(localStorage.getItem('mx_pwa_tracks')) || [
+      { name: "Dorno", lapTimeSec: 115 },
+      { name: "Ottobiano", lapTimeSec: 120 },
+      { name: "Malpensa", lapTimeSec: 105 }
     ];
-    let selectedDurationMin = 20;
-    let selectedTrack = null;
-    let alertTimeSec = 0;
+    let archive = JSON.parse(localStorage.getItem('mx_pwa_archive')) || [];
 
-    // Timer variables
+    // Session setup state
+    let currentDurationMin = 20;
+    let selectedRider = "";
+    let selectedTrack = null;
+    let targetAlertSec = 0;
+
+    // Live Timer state
     let timerInterval = null;
     let startTime = 0;
     let elapsedTime = 0;
     let isRunning = false;
-    let alertSounded = false;
-    let lastLapTime = 0;
-    let lapCounter = 0;
+    let alertTriggered = false;
+    let lapTimes = []; // { lapNum, durationMs, totalMs, colorClass }
+    let lastLapTotalMs = 0;
+    let bestLapMs = Infinity;
 
-    // Elements
-    const trackSelect = document.getElementById('track-select');
-    const calcPreview = document.getElementById('calc-preview');
+    /* ================= INITIALIZATION ================= */
+    window.onload = function() {
+      renderRidersDropdown();
+      renderTracksDropdown();
+      renderRidersList();
+      renderTracksList();
+      updateCalculationPreview();
+      renderArchive();
+    };
 
-    function init() {
-      updateTrackDropdown();
-      calculateTargetAlert();
+    /* ================= TAB NAVIGATION ================= */
+    function switchTab(tab) {
+      document.getElementById('tab-timer').classList.add('hidden');
+      document.getElementById('tab-archive').classList.add('hidden');
+      document.getElementById('tab-settings').classList.add('hidden');
+
+      document.getElementById('nav-timer-btn').className = "p-3 bg-gray-800 text-gray-300 font-bold rounded-xl shadow-lg";
+      document.getElementById('nav-archive-btn').className = "p-3 bg-gray-800 text-gray-300 font-bold rounded-xl shadow-lg";
+      document.getElementById('nav-settings-btn').className = "p-3 bg-gray-800 text-gray-300 font-bold rounded-xl shadow-lg";
+
+      if (tab === 'timer') {
+        document.getElementById('tab-timer').classList.remove('hidden');
+        document.getElementById('nav-timer-btn').className = "p-3 bg-brand-accent text-black font-bold rounded-xl shadow-lg";
+      } else if (tab === 'archive') {
+        document.getElementById('tab-archive').classList.remove('hidden');
+        document.getElementById('nav-archive-btn').className = "p-3 bg-brand-accent text-black font-bold rounded-xl shadow-lg";
+        renderArchive();
+      } else if (tab === 'settings') {
+        document.getElementById('tab-settings').classList.remove('hidden');
+        document.getElementById('nav-settings-btn').className = "p-3 bg-brand-accent text-black font-bold rounded-xl shadow-lg";
+      }
     }
 
-    function updateTrackDropdown() {
-      trackSelect.innerHTML = '<option value="">-- Seleziona Pista --</option>';
-      tracks.forEach((t, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.textContent = `${t.name} (${formatTimeSec(t.lapTimeSec)})`;
-        trackSelect.appendChild(opt);
+    /* ================= SETUP & CALCULATION LOGIC ================= */
+    function setMancheDuration(min, btn) {
+      currentDurationMin = min;
+      document.querySelectorAll('.btn-duration').forEach(b => {
+        b.className = "btn-duration bg-gray-800 text-white font-black text-xl py-4 rounded-xl border-2 border-gray-700 transition hover:border-gray-500";
+      });
+      btn.className = "btn-duration bg-brand-accent text-black font-black text-xl py-4 rounded-xl border-2 border-brand-accent transition shadow-lg";
+      updateCalculationPreview();
+    }
+
+    function updateCalculationPreview() {
+      const riderSelect = document.getElementById('select-rider');
+      const trackSelect = document.getElementById('select-track');
+
+      selectedRider = riderSelect.value;
+      const trackIdx = trackSelect.value;
+      selectedTrack = tracks[trackIdx] || null;
+
+      const previewBox = document.getElementById('calc-preview-text');
+
+      if (!selectedTrack || !selectedRider) {
+        previewBox.innerHTML = "Seleziona Pilota e Pista per calcolare l'avviso.";
+        targetAlertSec = 0;
+        return;
+      }
+
+      const totalMancheSec = currentDurationMin * 60;
+      const lapSec = selectedTrack.lapTimeSec;
+
+      // Formula: Giri stimati = Durata Manche / Tempo Giro Medio
+      const estimatedLaps = Math.round(totalMancheSec / lapSec);
+      // Avviso ai -2 giri (all'inizio del penultimo giro)
+      const alertLapNumber = Math.max(1, estimatedLaps - 2);
+      targetAlertSec = alertLapNumber * lapSec;
+
+      previewBox.innerHTML = `
+        Giri totali stimati: <span class="text-brand-accent font-bold">${estimatedLaps} giri</span><br>
+        Avviso <b class="text-yellow-400">-2 GIRI</b> al minuto: <span class="text-brand-accent text-lg font-black">${formatTimeMMSS(targetAlertSec)}</span>
+      `;
+    }
+
+    /* ================= LIVE TIMER LOGIC ================= */
+    function prepareLiveSession() {
+      if (!selectedTrack || !selectedRider) {
+        alert("Aggiungi e seleziona un pilota e una pista nelle impostazioni!");
+        return;
+      }
+
+      document.getElementById('setup-panel').classList.add('hidden');
+      document.getElementById('live-panel').classList.remove('hidden');
+
+      document.getElementById('live-rider-tag').textContent = selectedRider;
+      document.getElementById('live-track-tag').textContent = `${selectedTrack.name} (${currentDurationMin} min)`;
+      document.getElementById('target-alert-display').textContent = formatTimeMMSS(targetAlertSec);
+      document.getElementById('ref-time-display').textContent = formatTimeMMSS(selectedTrack.lapTimeSec);
+
+      resetLiveTimer();
+    }
+
+    function resetLiveTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      elapsedTime = 0;
+      lastLapTotalMs = 0;
+      lapTimes = [];
+      bestLapMs = Infinity;
+      alertTriggered = false;
+
+      document.getElementById('timer-display').textContent = "00:00.0";
+      document.getElementById('live-lap-count').textContent = "0";
+      document.getElementById('live-lap-list').innerHTML = '<div class="text-center text-gray-500 text-xs py-4 italic">Nessun giro ancora registrato. Premi AVVIA e poi GIRO.</div>';
+      document.getElementById('alert-banner').classList.add('hidden');
+
+      const startBtn = document.getElementById('start-pause-btn');
+      startBtn.innerHTML = '<i class="fa-solid fa-play"></i> AVVIA';
+      startBtn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2";
+
+      document.getElementById('lap-button').disabled = true;
+    }
+
+    function toggleTimer() {
+      const startBtn = document.getElementById('start-pause-btn');
+      const lapBtn = document.getElementById('lap-button');
+
+      if (!isRunning) {
+        // Avvia
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(updateLiveTimer, 100);
+        isRunning = true;
+
+        startBtn.innerHTML = '<i class="fa-solid fa-pause"></i> PAUSA';
+        startBtn.className = "bg-amber-600 hover:bg-amber-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2";
+        lapBtn.disabled = false;
+      } else {
+        // Pausa
+        clearInterval(timerInterval);
+        isRunning = false;
+
+        startBtn.innerHTML = '<i class="fa-solid fa-play"></i> RIPRENDI';
+        startBtn.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg uppercase tracking-wider active:scale-95 transition flex items-center justify-center gap-2";
+        lapBtn.disabled = true;
+      }
+    }
+
+    function updateLiveTimer() {
+      elapsedTime = Date.now() - startTime;
+      document.getElementById('timer-display').textContent = formatTimeMs(elapsedTime);
+
+      // Verifico scatto avviso -2 Giri
+      const currentSec = elapsedTime / 1000;
+      if (currentSec >= targetAlertSec && targetAlertSec > 0 && !alertTriggered) {
+        alertTriggered = true;
+        trigger2LapAlert();
+      }
+    }
+
+    function trigger2LapAlert() {
+      const banner = document.getElementById('alert-banner');
+      banner.classList.remove('hidden');
+
+      // Beep Acustico
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Nota A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.2);
+      } catch (e) {
+        console.log("Audio non supportato o bloccato dal browser");
+      }
+    }
+
+    /* ================= REGISTRAZIONE GIRO & COLORI ================= */
+    function recordLap() {
+      if (!isRunning) return;
+
+      const currentLapDurationMs = elapsedTime - lastLapTotalMs;
+      lastLapTotalMs = elapsedTime;
+      const lapNum = lapTimes.length + 1;
+
+      // Determinazione Colore Tempo:
+      // FUCSIA: Nuovo Best Lap della manche OPPURE > 2s più veloce del tempo di riferimento
+      // VERDE: Entro il tempo medio di riferimento + 3 secondi
+      // ROSSO: Più di 3 secondi più lento del tempo di riferimento
+      const refSec = selectedTrack.lapTimeSec;
+      const lapSec = currentLapDurationMs / 1000;
+
+      let colorClass = "lap-green";
+      let colorTag = "VERDE";
+
+      if (currentLapDurationMs < bestLapMs) {
+        bestLapMs = currentLapDurationMs;
+        colorClass = "lap-fuchsia";
+        colorTag = "BEST / FUCSIA";
+      } else if (lapSec <= (refSec + 3)) {
+        colorClass = "lap-green";
+        colorTag = "BUONO";
+      } else {
+        colorClass = "lap-red";
+        colorTag = "LENTO";
+      }
+
+      // Ricalcola se ci sono stati fucsia precedenti che non sono più il Best Lap
+      lapTimes.push({
+        lapNum: lapNum,
+        durationMs: currentLapDurationMs,
+        totalMs: elapsedTime,
+        colorClass: colorClass
+      });
+
+      // Aggiorna UI Giri
+      document.getElementById('live-lap-count').textContent = lapNum;
+      renderLiveLapList();
+    }
+
+    function renderLiveLapList() {
+      const listContainer = document.getElementById('live-lap-list');
+      listContainer.innerHTML = "";
+
+      // Mostra in ordine decrescente (ultimo giro in alto)
+      [...lapTimes].reverse().forEach(lap => {
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl flex justify-between items-center font-bold text-sm ${lap.colorClass}`;
+        div.innerHTML = `
+          <div>GIRO ${lap.lapNum}</div>
+          <div class="text-base font-mono-timer font-black">${formatTimeMs(lap.durationMs)}</div>
+          <div class="text-xs opacity-75">Tot: ${formatTimeMMSS(lap.totalMs / 1000)}</div>
+        `;
+        listContainer.appendChild(div);
       });
     }
 
-    function saveTrack() {
-      const name = document.getElementById('track-name').value.trim();
-      const min = parseInt(document.getElementById('lap-min').value) || 0;
-      const sec = parseInt(document.getElementById('lap-sec').value) || 0;
+    /* ================= FINISH & ARCHIVE ================= */
+    function finishSession() {
+      if (lapTimes.length === 0 && elapsedTime === 0) {
+        exitLiveToSetup();
+        return;
+      }
+
+      if (confirm("Vuoi salvare questa manche nell'archivio?")) {
+        // Calcola Best Lap
+        let minLap = lapTimes.length > 0 ? Math.min(...lapTimes.map(l => l.durationMs)) : 0;
+
+        const sessionRecord = {
+          id: Date.now(),
+          dateStr: new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          rider: selectedRider,
+          track: selectedTrack.name,
+          durationMin: currentDurationMin,
+          totalTimeMs: elapsedTime,
+          lapsCount: lapTimes.length,
+          bestLapMs: minLap,
+          laps: lapTimes
+        };
+
+        archive.unshift(sessionRecord);
+        localStorage.setItem('mx_pwa_archive', JSON.stringify(archive));
+      }
+
+      exitLiveToSetup();
+    }
+
+    function exitLiveToSetup() {
+      if (isRunning) toggleTimer();
+      document.getElementById('live-panel').classList.add('hidden');
+      document.getElementById('setup-panel').classList.remove('hidden');
+      renderArchive();
+    }
+
+    /* ================= ARCHIVE MANAGEMENT ================= */
+    function renderArchive() {
+      const container = document.getElementById('archive-list');
+      const filterRider = document.getElementById('archive-filter-rider').value;
+      container.innerHTML = "";
+
+      // Aggiorna filtro dropdown piloti
+      const filterSelect = document.getElementById('archive-filter-rider');
+      const currentFilter = filterSelect.value;
+      filterSelect.innerHTML = '<option value="ALL">Tutti i Piloti</option>';
+      riders.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        filterSelect.appendChild(opt);
+      });
+      filterSelect.value = currentFilter || "ALL";
+
+      const filteredArchive = filterRider === "ALL" 
+        ? archive 
+        : archive.filter(a => a.rider === filterRider);
+
+      if (filteredArchive.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">Nessuna manche salvata in archivio.</div>';
+        return;
+      }
+
+      filteredArchive.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "bg-brand-card p-4 rounded-2xl border border-gray-800 shadow-md space-y-2 cursor-pointer hover:border-gray-700";
+        card.onclick = () => openArchiveDetail(item.id);
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center text-xs font-semibold text-gray-400">
+            <span><i class="fa-solid fa-calendar-day"></i> ${item.dateStr}</span>
+            <span class="bg-gray-800 text-brand-accent px-2 py-1 rounded-md font-bold">${item.durationMin} MIN MANCHE</span>
+          </div>
+          <div class="flex justify-between items-end">
+            <div>
+              <div class="text-lg font-black text-white">${item.rider}</div>
+              <div class="text-sm font-semibold text-gray-300"><i class="fa-solid fa-location-dot text-brand-accent"></i> ${item.track}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-400">BEST LAP</div>
+              <div class="text-brand-fuchsia font-mono-timer font-black text-base">${item.bestLapMs ? formatTimeMs(item.bestLapMs) : '--:--'}</div>
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-xs border-t border-gray-800 pt-2 text-gray-400">
+            <div>Giri completati: <b class="text-white">${item.lapsCount}</b></div>
+            <div>Tempo Totale: <b class="text-white">${formatTimeMMSS(item.totalTimeMs / 1000)}</b></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openArchiveDetail(id) {
+      const item = archive.find(a => a.id === id);
+      if (!item) return;
+
+      document.getElementById('modal-title').textContent = `${item.rider} @ ${item.track}`;
+      const body = document.getElementById('modal-body');
+
+      let lapsHtml = item.laps.map(l => `
+        <div class="p-3 rounded-xl flex justify-between items-center font-bold text-sm ${l.colorClass}">
+          <div>GIRO ${l.lapNum}</div>
+          <div class="text-base font-mono-timer font-black">${formatTimeMs(l.durationMs)}</div>
+          <div class="text-xs opacity-75">Tot: ${formatTimeMMSS(l.totalMs / 1000)}</div>
+        </div>
+      `).join('');
+
+      body.innerHTML = `
+        <div class="bg-gray-900 p-3 rounded-xl space-y-1 text-xs">
+          <div>Data: <b>${item.dateStr}</b></div>
+          <div>Manche: <b>${item.durationMin} Minuti</b></div>
+          <div>Tempo Totale: <b>${formatTimeMMSS(item.totalTimeMs / 1000)}</b></div>
+          <div>Miglior Giro: <b class="text-brand-fuchsia">${item.bestLapMs ? formatTimeMs(item.bestLapMs) : '--'}</b></div>
+        </div>
+        <h4 class="font-bold text-sm text-gray-300 uppercase mt-2">Dettaglio Giri:</h4>
+        <div class="space-y-2">
+          ${lapsHtml || '<div class="text-gray-500 text-xs">Nessun dettaglio giro disponibile.</div>'}
+        </div>
+        <button onclick="deleteArchiveItem(${item.id})" class="w-full mt-4 bg-red-950/60 border border-red-800 text-red-400 font-bold py-2 rounded-xl text-xs">
+          Elimina Questa Manche
+        </button>
+      `;
+
+      document.getElementById('archive-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('archive-modal').classList.add('hidden');
+    }
+
+    function deleteArchiveItem(id) {
+      if (confirm("Eliminare questa manche dall'archivio?")) {
+        archive = archive.filter(a => a.id !== id);
+        localStorage.setItem('mx_pwa_archive', JSON.stringify(archive));
+        closeModal();
+        renderArchive();
+      }
+    }
+
+    function clearArchive() {
+      if (confirm("Sei sicuro di voler cancellare TUTTO l'archivio?")) {
+        archive = [];
+        localStorage.removeItem('mx_pwa_archive');
+        renderArchive();
+      }
+    }
+
+    /* ================= SETTINGS MANAGEMENT (RIDERS & TRACKS) ================= */
+    function renderRidersDropdown() {
+      const select = document.getElementById('select-rider');
+      select.innerHTML = "";
+      riders.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderTracksDropdown() {
+      const select = document.getElementById('select-track');
+      select.innerHTML = "";
+      tracks.forEach((t, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${t.name} (Media: ${formatTimeMMSS(t.lapTimeSec)})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderRidersList() {
+      const container = document.getElementById('riders-list');
+      container.innerHTML = "";
+      riders.forEach((r, idx) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center bg-gray-900 p-3 rounded-xl border border-gray-800 font-bold";
+        div.innerHTML = `
+          <span>${r}</span>
+          <button onclick="removeRider(${idx})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderTracksList() {
+      const container = document.getElementById('tracks-list');
+      container.innerHTML = "";
+      tracks.forEach((t, idx) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center bg-gray-900 p-3 rounded-xl border border-gray-800 font-bold";
+        div.innerHTML = `
+          <div>
+            <div>${t.name}</div>
+            <div class="text-xs text-gray-400">Media Giro: ${formatTimeMMSS(t.lapTimeSec)}</div>
+          </div>
+          <button onclick="removeTrack(${idx})" class="text-red-400 hover:text-red-300 text-xs"><i class="fa-solid fa-trash"></i></button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function addRider() {
+      const input = document.getElementById('new-rider-name');
+      const name = input.value.trim();
+      if (!name) return;
+
+      riders.push(name);
+      localStorage.setItem('mx_pwa_riders', JSON.stringify(riders));
+      input.value = "";
+      renderRidersDropdown();
+      renderRidersList();
+      updateCalculationPreview();
+    }
+
+    function removeRider(idx) {
+      riders.splice(idx, 1);
+      localStorage.setItem('mx_pwa_riders', JSON.stringify(riders));
+      renderRidersDropdown();
+      renderRidersList();
+      updateCalculationPreview();
+    }
+
+    function addTrack() {
+      const nameInput = document.getElementById('new-track-name');
+      const minInput = document.getElementById('new-track-min');
+      const secInput = document.getElementById('new-track-sec');
+
+      const name = nameInput.value.trim();
+      const min = parseInt(minInput.value) || 0;
+      const sec = parseInt(secInput.value) || 0;
       const totalSec = (min * 60) + sec;
 
       if (!name || totalSec <= 0) {
-        alert("Inserisci un nome valido e un tempo di giro valido.");
+        alert("Inserisci un nome pista e un tempo giro valido.");
         return;
       }
 
       tracks.push({ name, lapTimeSec: totalSec });
-      localStorage.setItem('mx_tracks', JSON.stringify(tracks));
-      updateTrackDropdown();
-      trackSelect.value = tracks.length - 1;
-      onTrackChange();
+      localStorage.setItem('mx_pwa_tracks', JSON.stringify(tracks));
 
-      // Reset form
-      document.getElementById('track-name').value = '';
+      nameInput.value = "";
+      renderTracksDropdown();
+      renderTracksList();
+      updateCalculationPreview();
     }
 
-    function onTrackChange() {
-      const idx = trackSelect.value;
-      if (idx !== "") {
-        selectedTrack = tracks[idx];
-      } else {
-        selectedTrack = null;
-      }
-      calculateTargetAlert();
+    function removeTrack(idx) {
+      tracks.splice(idx, 1);
+      localStorage.setItem('mx_pwa_tracks', JSON.stringify(tracks));
+      renderTracksDropdown();
+      renderTracksList();
+      updateCalculationPreview();
     }
 
-    function setDuration(min, btn) {
-      selectedDurationMin = min;
-      document.querySelectorAll('.btn-duration').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      calculateTargetAlert();
-    }
-
-    function calculateTargetAlert() {
-      if (!selectedTrack) {
-        calcPreview.innerHTML = "Seleziona una pista per vedere il calcolo dei <b>-2 giri</b>.";
-        alertTimeSec = 0;
-        return;
-      }
-
-      const totalMancheSec = selectedDurationMin * 60;
-      const lapSec = selectedTrack.lapTimeSec;
-
-      // Formula: Giri totali = Manche / TempoGiro
-      const estimatedLaps = Math.round(totalMancheSec / lapSec);
-      
-      // Avviso 2 giri prima della fine -> all'inizio dell'ultimo paio di giri
-      const alertLapNumber = estimatedLaps - 2;
-      alertTimeSec = Math.max(0, alertLapNumber * lapSec);
-
-      calcPreview.innerHTML = `
-        Pista: <b>${selectedTrack.name}</b><br>
-        Giri totali stimati: <b>~${estimatedLaps} giri</b><br>
-        Avvisa il nonno al minuto: <b style="color:var(--accent); font-size:1.2rem;">${formatTimeSec(alertTimeSec)}</b>
-      `;
-    }
-
-    function formatTimeSec(seconds) {
+    /* ================= HELPERS & FORMATTING ================= */
+    function formatTimeMMSS(seconds) {
       const m = Math.floor(seconds / 60);
       const s = Math.floor(seconds % 60);
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -382,116 +871,6 @@
       const tenth = Math.floor((ms % 1000) / 100);
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${tenth}`;
     }
-
-    function startSession() {
-      if (!selectedTrack) {
-        alert("Seleziona una pista prima di iniziare!");
-        return;
-      }
-
-      document.getElementById('setup-screen').classList.add('hidden');
-      document.getElementById('live-screen').classList.remove('hidden');
-
-      document.getElementById('live-track-info').textContent = `${selectedTrack.name} - ${selectedDurationMin} MIN`;
-      document.getElementById('target-alert-info').textContent = `Avviso -2 giri previsto a ${formatTimeSec(alertTimeSec)}`;
-
-      resetTimer();
-    }
-
-    function exitLive() {
-      if (isRunning) toggleTimer();
-      document.getElementById('live-screen').classList.add('hidden');
-      document.getElementById('setup-screen').classList.remove('hidden');
-    }
-
-    function toggleTimer() {
-      const mainBtn = document.getElementById('main-action-btn');
-      const lapBtn = document.getElementById('lap-btn');
-
-      if (!isRunning) {
-        // Avvia
-        startTime = Date.now() - elapsedTime;
-        timerInterval = setInterval(updateTimer, 100);
-        isRunning = true;
-        mainBtn.textContent = "PAUSA / FERMA";
-        mainBtn.className = "big-btn btn-stop";
-        lapBtn.classList.remove('hidden');
-      } else {
-        // Pausa
-        clearInterval(timerInterval);
-        isRunning = false;
-        mainBtn.textContent = "RIPRENDI";
-        mainBtn.className = "big-btn btn-start";
-      }
-    }
-
-    function resetTimer() {
-      clearInterval(timerInterval);
-      isRunning = false;
-      elapsedTime = 0;
-      lastLapTime = 0;
-      lapCounter = 0;
-      alertSounded = false;
-
-      document.getElementById('timer-display').textContent = "00:00.0";
-      document.getElementById('lap-count').textContent = "0";
-      document.getElementById('lap-list').innerHTML = "";
-      document.getElementById('alert-box').style.display = "none";
-      
-      const mainBtn = document.getElementById('main-action-btn');
-      mainBtn.textContent = "AVVIA CRONOMETRO";
-      mainBtn.className = "big-btn btn-start";
-      document.getElementById('lap-btn').classList.add('hidden');
-    }
-
-    function updateTimer() {
-      elapsedTime = Date.now() - startTime;
-      document.getElementById('timer-display').textContent = formatTimeMs(elapsedTime);
-
-      // Check alert condition
-      const currentSec = elapsedTime / 1000;
-      if (currentSec >= alertTimeSec && alertTimeSec > 0 && !alertSounded) {
-        alertSounded = true;
-        triggerAlert();
-      }
-    }
-
-    function triggerAlert() {
-      document.getElementById('alert-box').style.display = "block";
-      // Beep acustico (Web Audio API)
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
-        osc.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 1.5);
-      } catch(e) {}
-    }
-
-    function recordLap() {
-      if (!isRunning) return;
-
-      lapCounter++;
-      const currentLapDuration = elapsedTime - lastLapTime;
-      lastLapTime = elapsedTime;
-
-      document.getElementById('lap-count').textContent = lapCounter;
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>Giro ${lapCounter}</td>
-        <td><b>${formatTimeMs(currentLapDuration)}</b></td>
-        <td>${formatTimeMs(elapsedTime)}</td>
-      `;
-      
-      const lapList = document.getElementById('lap-list');
-      lapList.insertBefore(row, lapList.firstChild);
-    }
-
-    // Init
-    init();
   </script>
 </body>
 </html>
