@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MX Pro Lap Timer</title>
+  <meta name="theme-color" content="#090b0f">
+  <title>MX Chrono Pro · Trackside Race Control</title>
   <style>
     :root {
-      --bg: #121212;
-      --card: #1e1e1e;
-      --accent: #ff6b00;
-      --text: #ffffff;
-      --text-sub: #a0a0a0;
-      --danger: #e53935;
-      --success: #43a047;
-      --purple: #d500f9;
-      --green-perf: #00e676;
-      --yellow-perf: #ffea00;
-      --red-perf: #ff3d00;
+      --bg: #090b0f;
+      --card: #141920;
+      --accent: #ff642d;
+      --text: #f5f7fa;
+      --text-sub: #8995a3;
+      --danger: #ff4d55;
+      --success: #b8f35a;
+      --purple: #b68cff;
+      --green-perf: #a7f26b;
+      --yellow-perf: #ffd166;
+      --red-perf: #ff6b70;
+      --surface: #1b222b;
+      --line: rgba(255,255,255,0.08);
     }
 
     * {
@@ -175,6 +178,41 @@
       color: #fff;
     }
 
+    .timer-secondary {
+      border-top: 1px solid #333;
+      margin-top: 10px;
+      padding-top: 10px;
+      color: var(--text-sub);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #current-lap-display {
+      display: block;
+      color: var(--accent);
+      font: 800 1.8rem monospace;
+      margin-top: 3px;
+    }
+
+    #timer-riders-container.dual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .participant-total-label { color: var(--text-sub); font-size: 0.75rem; text-align: center; letter-spacing: 0.8px; }
+    .participant-card { min-width: 0; }
+    .participant-card h2 { margin-bottom: 12px; overflow-wrap: anywhere; }
+    .participant-timer-total { color: #fff; font: 900 3rem monospace; text-align: center; margin: 2px 0; }
+    .participant-alert-info { color: var(--text-sub); font-size: 0.8rem; text-align: center; margin: 10px 0; min-height: 2.4em; }
+    .participant-lap-button { height: 76px; touch-action: manipulation; }
+    .participant-lap-button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #timer-riders-container.dual .participant-card { padding: 10px; margin-bottom: 0; }
+    #timer-riders-container.dual .participant-card h2 { font-size: 0.9rem; }
+    #timer-riders-container.dual .participant-timer-total { font-size: 1.65rem; }
+    #timer-riders-container.dual .timer-secondary { font-size: 0.68rem; }
+    #timer-riders-container.dual .timer-secondary strong { font-size: 1.2rem; }
+    #timer-riders-container.dual .participant-alert-info { font-size: 0.68rem; min-height: 3.6em; }
+    #timer-riders-container.dual .participant-lap-button { height: 64px; padding: 8px 4px; font-size: 1rem; }
+    #timer-riders-container.dual .lap-table th, #timer-riders-container.dual .lap-table td { padding: 6px 2px; font-size: 0.68rem; }
+    #timer-riders-container.dual .lap-table th:nth-child(4), #timer-riders-container.dual .lap-table td:nth-child(4) { display: none; }
+
     .alert-banner {
       display: none;
       background: var(--danger);
@@ -207,6 +245,7 @@
     .btn-lap { background: #1976d2; color: white; }
     .btn-start { background: var(--success); color: white; }
     .btn-stop { background: var(--danger); color: white; }
+    .btn-reset { height: 52px; background: #252525; border: 1px solid #555; color: #ff8a80; font-size: 1rem; }
 
     /* TABELLE TEMPI */
     .lap-table {
@@ -258,6 +297,18 @@
     }
     .archive-title { font-weight: bold; font-size: 1rem; }
     .archive-sub { color: var(--text-sub); font-size: 0.8rem; }
+    .archive-folder { background: #252525; border: 1px solid #383838; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+    .archive-folder > summary { padding: 14px; cursor: pointer; color: var(--accent); font-weight: bold; }
+    .archive-folder-count { float: right; color: var(--text-sub); font-size: 0.8rem; font-weight: normal; }
+    .archive-date-group { padding: 0 10px 8px; }
+    .archive-date-title { color: var(--text-sub); font-size: 0.8rem; margin: 8px 2px; text-transform: uppercase; }
+    .archive-item { border-left-color: #555; }
+    .archive-session-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .archive-session-actions button { margin-bottom: 0; font-size: 0.84rem; }
+    .btn-print { background: linear-gradient(135deg, #283542, #18212a); border: 1px solid rgba(99,201,242,0.35); color: #b9eaff; }
+    .archive-detail-header { margin-bottom: 12px; }
+    .archive-detail-header h3 { color: var(--accent); margin-bottom: 6px; }
+    .archive-detail-meta { color: var(--text-sub); font-size: 0.9rem; line-height: 1.5; }
 
     /* BARRA DI NAVIGAZIONE INFERIORE (BOTTOM NAV) */
     nav {
@@ -297,55 +348,244 @@
     }
 
     .hidden { display: none !important; }
+
+    /* MX CHRONO PRO — PREMIUM RACE UI */
+    body {
+      background:
+        radial-gradient(ellipse at 12% -12%, rgba(255,100,45,0.16), transparent 38%),
+        radial-gradient(ellipse at 100% 42%, rgba(71,126,157,0.08), transparent 34%),
+        #090b0f;
+      background-attachment: fixed;
+    }
+
+    header.brand-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 76px;
+      padding: 12px 16px;
+      text-align: left;
+      background: rgba(11,14,18,0.96);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+    header.brand-header::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 38%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), rgba(255,100,45,0));
+    }
+    .brand-emblem {
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: 0 0 46px;
+      height: 46px;
+      color: #101318;
+      background: linear-gradient(145deg, #ffad55, var(--accent) 72%);
+      border-radius: 13px 5px 13px 5px;
+      box-shadow: 0 7px 22px rgba(255,100,45,0.22);
+      transform: skew(-5deg);
+    }
+    .brand-emblem span { font-size: 1.08rem; font-weight: 1000; letter-spacing: -1px; }
+    .brand-emblem i {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      width: 11px;
+      height: 3px;
+      background: rgba(15,18,22,0.7);
+      box-shadow: -5px -5px 0 rgba(15,18,22,0.5);
+    }
+    .brand-wordmark { min-width: 0; }
+    .brand-eyebrow { color: #8793a0; font-size: 0.58rem; font-weight: 800; letter-spacing: 1.7px; margin-bottom: 3px; }
+    header.brand-header h1 { color: #f5f7fa; font-size: 1.05rem; letter-spacing: 1.3px; line-height: 1; }
+    header.brand-header h1 span { color: var(--accent); }
+    .brand-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      padding: 7px 9px;
+      color: #a6b0bb;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 0.55rem;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+      white-space: nowrap;
+    }
+    .brand-pill span { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 9px rgba(184,243,90,0.8); }
+
+    main { width: 100%; max-width: 920px; margin: 0 auto; padding: 16px 14px 90px; }
+    .card {
+      position: relative;
+      background: linear-gradient(145deg, rgba(23,29,37,0.98), rgba(17,21,27,0.98));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 13px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    }
+    .card h2, .card h3 { color: #e9edf2; }
+    .card h2 { font-size: 1rem; letter-spacing: 0.15px; }
+    .card h2::first-letter { color: var(--accent); }
+    .session-status { padding: 14px 16px; border-left: 3px solid var(--accent); }
+    .section-kicker { color: #778391; font-size: 0.6rem; font-weight: 900; letter-spacing: 1.6px; margin-bottom: 5px; }
+    #live-session-info { color: #f6f7f9; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.2px; }
+    #target-alert-info { color: #98a3af; font-size: 0.75rem; margin-top: 5px; line-height: 1.4; }
+
+    select, input {
+      background: #10151b;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 11px;
+      min-height: 48px;
+      color: var(--text);
+    }
+    select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,100,45,0.12); }
+    input::placeholder { color: #66717d; }
+    label { color: #a4afbb; font-weight: 700; letter-spacing: 0.15px; }
+    .calc-info { background: rgba(255,100,45,0.07); border-left-color: var(--accent); border-radius: 10px; color: #c2cbd4; }
+    .btn-duration { background: #11161c; border-color: #303943; color: #c3ccd5; border-radius: 11px; }
+    .btn-duration.active { background: rgba(255,100,45,0.12); border-color: var(--accent); color: #ff9b70; }
+
+    .participant-card { border-top: 2px solid var(--rider-accent, var(--accent)); }
+    #timer-riders-container.dual .participant-card:nth-child(2) { --rider-accent: #63c9f2; }
+    .participant-card h2 { color: var(--rider-accent, var(--accent)); }
+    .participant-timer-total {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.09em;
+      text-shadow: 0 4px 28px rgba(255,255,255,0.08);
+    }
+    .timer-secondary { border-top-color: var(--line); color: #82909e; }
+    .timer-secondary strong { color: var(--rider-accent, var(--accent)); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .participant-alert-info { color: #9aa6b2; }
+
+    .big-btn, button, select { transition: transform 120ms ease, filter 120ms ease, border-color 120ms ease; }
+    button { border-radius: 11px; }
+    button:active:not(:disabled) { transform: scale(0.985); filter: brightness(1.08); }
+    .big-btn { border-radius: 14px; letter-spacing: 0.35px; box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+    .btn-start { background: linear-gradient(135deg, #c7ff70, #92d94a); color: #11180b; box-shadow: 0 8px 25px rgba(156,220,76,0.13); }
+    .btn-stop { background: linear-gradient(135deg, #ff696c, #e53c4c); color: white; }
+    .btn-lap { background: linear-gradient(135deg, #51c9f4, #198cda); color: #07131c; box-shadow: 0 8px 24px rgba(47,166,225,0.18); }
+    .btn-reset { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.12); color: #ff9b8c; box-shadow: none; }
+    .participant-start-button { height: 64px; font-size: 1.02rem; }
+    .participant-lap-button:disabled { filter: saturate(0.45); box-shadow: none; }
+    .btn-accent { background: linear-gradient(135deg, #ff884a, var(--accent)); border-radius: 11px; box-shadow: 0 8px 22px rgba(255,100,45,0.14); }
+
+    .lap-table { border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: 10px; }
+    .lap-table th { color: #788491; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.55px; }
+    .lap-table td { color: #d8dee5; }
+    .lap-table th, .lap-table td { border-bottom-color: rgba(255,255,255,0.06); }
+    .badge-perf { border-radius: 6px; padding: 3px 7px; }
+    .perf-best { background: #b68cff; color: #160a2a; }
+    .perf-good { background: #a7f26b; color: #101a08; }
+    .perf-avg { background: #ffd166; color: #241a04; }
+    .perf-poor { background: #ff6b70; color: #26080a; }
+
+    .archive-folder { background: rgba(20,25,32,0.9); border-color: var(--line); border-radius: 14px; }
+    .archive-folder > summary { list-style: none; color: #f1f4f7; }
+    .archive-folder > summary::-webkit-details-marker { display: none; }
+    .archive-folder > summary::after { content: "＋"; float: right; color: var(--accent); }
+    .archive-folder[open] > summary::after { content: "−"; }
+    .archive-item { background: rgba(255,255,255,0.025); border-radius: 11px; border-left: 2px solid var(--accent); }
+    .archive-date-title { color: #aab4bf; font-weight: 800; letter-spacing: 0.8px; }
+
+    nav {
+      height: 68px;
+      background: rgba(12,15,19,0.94);
+      border-top: 1px solid rgba(255,255,255,0.09);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn { color: #71808e; font-weight: 700; min-width: 66px; border-radius: 12px; }
+    .nav-btn.active { color: #ff986d; background: rgba(255,100,45,0.08); }
+    .nav-btn .icon { filter: saturate(0.85); }
+
+    .alert-banner {
+      background: linear-gradient(100deg, #a91426, #ff4653 55%, #a91426);
+      border: 1px solid rgba(255,255,255,0.17);
+      box-shadow: 0 8px 30px rgba(255,51,69,0.24);
+      border-radius: 13px;
+      font-size: 1rem;
+    }
+    @media (max-width: 380px) {
+      header.brand-header { gap: 9px; padding-left: 12px; padding-right: 12px; }
+      .brand-emblem { flex-basis: 40px; height: 40px; }
+      .brand-pill { font-size: 0.48rem; padding: 6px 7px; }
+      header.brand-header h1 { font-size: 0.92rem; }
+      #timer-riders-container.dual { gap: 7px; }
+      #timer-riders-container.dual .participant-card { padding: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    .print-sheet { display: none; }
+    @media print {
+      @page { size: A4 portrait; margin: 12mm; }
+      html, body { display: block !important; width: auto; height: auto !important; min-height: 0; overflow: visible !important; margin: 0 !important; background: #fff !important; color: #141920 !important; }
+      body > *:not(#print-sheet) { display: none !important; }
+      #print-sheet { display: block !important; }
+      .pdf-page { color: #18202a; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .pdf-topbar { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #d8dee5; padding-bottom: 14px; }
+      .pdf-emblem { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 12px 4px 12px 4px; background: #ff642d; color: #111820; font-size: 15px; font-weight: 900; }
+      .pdf-brand { font-size: 15px; font-weight: 900; letter-spacing: 1px; }
+      .pdf-brand span { color: #ff642d; }
+      .pdf-brand small { display: block; color: #75808d; font-size: 8px; letter-spacing: 1.8px; margin-top: 4px; }
+      .pdf-report-tag { margin-left: auto; color: #75808d; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
+      .pdf-accent-line { height: 4px; width: 100%; margin: 12px 0 22px; background: linear-gradient(90deg, #ff642d 0 28%, #1c2732 28% 100%); }
+      .pdf-heading { margin-bottom: 20px; }
+      .pdf-heading-kicker { color: #e85b29; font-size: 9px; font-weight: 900; letter-spacing: 2px; }
+      .pdf-heading h1 { margin: 6px 0 4px; color: #141920; font-size: 28px; letter-spacing: -0.6px; }
+      .pdf-heading p { color: #687482; font-size: 12px; }
+      .pdf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0 24px; }
+      .pdf-stat { padding: 13px; border: 1px solid #e0e5ea; border-radius: 10px; background: #f5f7f9; }
+      .pdf-stat span { display: block; color: #798491; font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+      .pdf-stat strong { display: block; margin-top: 5px; color: #171d24; font-family: Consolas, monospace; font-size: 20px; }
+      .pdf-section-title { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: #222b35; font-size: 12px; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; }
+      .pdf-section-title::before { content: ""; width: 4px; height: 15px; background: #ff642d; border-radius: 2px; }
+      .pdf-lap-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      .pdf-lap-table thead { display: table-header-group; }
+      .pdf-lap-table tr { break-inside: avoid; }
+      .pdf-lap-table th { padding: 9px 8px; background: #18212a; color: #fff; font-size: 8px; letter-spacing: 0.7px; text-align: left; text-transform: uppercase; }
+      .pdf-lap-table td { padding: 9px 8px; border-bottom: 1px solid #e6eaee; color: #303a45; font-size: 10px; }
+      .pdf-lap-table tbody tr:nth-child(even) { background: #f6f8fa; }
+      .pdf-best { display: inline-block; margin-left: 6px; padding: 3px 6px; border-radius: 999px; background: #e9f7d3; color: #3d6916; font-size: 7px; font-weight: 900; letter-spacing: 0.5px; }
+      .pdf-footer { display: flex; justify-content: space-between; margin-top: 22px; padding-top: 10px; border-top: 1px solid #d8dee5; color: #89939e; font-size: 8px; letter-spacing: 0.4px; }
+      .pdf-empty { padding: 18px; border: 1px dashed #c4cdd6; border-radius: 8px; color: #697583; font-size: 10px; }
+    }
+
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🏁 MX Crono Pro</h1>
+  <header class="brand-header">
+    <div class="brand-emblem"><span>MX</span><i></i></div>
+    <div class="brand-wordmark">
+      <div class="brand-eyebrow">TRACKSIDE · RACE CONTROL</div>
+      <h1>MX CHRONO <span>PRO</span></h1>
+    </div>
+    <div class="brand-pill"><span></span> TIMING SYSTEM</div>
   </header>
 
   <main>
     <!-- PAGE 1: CRONOMETRO LIVE -->
     <div id="page-timer" class="page active">
-      <div id="alert-box" class="alert-banner">
-        🚨 CARTELLO -2 GIRI ORA! 🚨
+      <div id="alert-box" class="alert-banner">🚨 CARTELLO -2 GIRI ORA! 🚨</div>
+      <div class="card session-status">
+        <div class="section-kicker">SESSIONE ATTIVA</div>
+        <div id="live-session-info">Nessuna Manche Configurata</div>
+        <div id="target-alert-info">Configura una manche nella sezione "Setup"</div>
       </div>
-
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 1rem; color: var(--accent); font-weight: bold;" id="live-session-info">
-          Nessuna Manche Configurata
-        </div>
-        <div id="timer-display">00:00.0</div>
-        
-        <div style="font-size: 0.85rem; color: var(--text-sub);" id="target-alert-info">
-          Configura una manche nella sezione "Setup"
-        </div>
-        
-        <div id="dynamic-mode-badge" class="hidden" style="margin-top: 5px; font-size: 0.75rem; color: var(--green-perf);">
-          ⚡ Media Ricalcolata Dinamicamente sul Passo Reale
-        </div>
-      </div>
-
       <button id="main-action-btn" class="big-btn btn-start" onclick="toggleTimer()">AVVIA CRONOMETRO</button>
-      <button id="lap-btn" class="big-btn btn-lap hidden" onclick="recordLap()">GIRO (TRAGUARDO)</button>
-
-      <div class="card">
-        <h3>Giri Completati: <span id="lap-count">0</span></h3>
-        <table class="lap-table">
-          <thead>
-            <tr>
-              <th>Giro</th>
-              <th>Tempo</th>
-              <th>Delta</th>
-              <th>Totale</th>
-            </tr>
-          </thead>
-          <tbody id="lap-list">
-            <tr><td colspan="4" style="color:var(--text-sub);">Avvia la manche e premi "GIRO"</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <button id="reset-btn" class="big-btn btn-reset" onclick="resetTimerWithConfirmation()">AZZERA</button>
+      <div id="timer-riders-container"></div>
     </div>
 
     <!-- PAGE 2: SETUP MANCHE -->
@@ -353,8 +593,11 @@
       <div class="card">
         <h2>⚙️ Configura Manche</h2>
         
-        <label>Pilota</label>
+        <label>Pilota 1</label>
         <select id="setup-rider" onchange="updateSetupPreview()"></select>
+
+        <label>Pilota 2 (facoltativo)</label>
+        <select id="setup-rider-2" onchange="updateSetupPreview()"></select>
 
         <label>Pista</label>
         <select id="setup-track" onchange="updateSetupPreview()"></select>
@@ -390,11 +633,6 @@
       <div class="card">
         <h2>🏍️ Gestione Piste</h2>
         <input type="text" id="new-track-name" placeholder="Nome Pista (es. Dorno)">
-        <label>Tempo Medio al Giro</label>
-        <div class="row-2">
-          <input type="number" id="lap-min" placeholder="Min" min="0" value="1">
-          <input type="number" id="lap-sec" placeholder="Sec" min="0" max="59" value="55">
-        </div>
         <button class="btn-accent" onclick="addTrack()">Salva Pista</button>
         <div id="tracks-list-display" style="font-size: 0.9rem; color: var(--text-sub); margin-top: 10px;"></div>
       </div>
@@ -406,6 +644,11 @@
         <h2>📁 Archivio Manche</h2>
         <div id="archive-list">
           <div style="color: var(--text-sub); font-size:0.9rem;">Nessuna manche salvata.</div>
+        </div>
+        <div id="archive-detail" class="hidden">
+          <button class="btn-accent" onclick="returnToArchiveList()">← Torna alle piste</button>
+          <div class="archive-detail-header"><h3 id="archive-session-title"></h3><div id="archive-session-meta" class="archive-detail-meta"></div></div>
+          <table class="lap-table"><thead><tr><th>Giro</th><th>Parziale</th><th>Delta</th><th>Totale</th></tr></thead><tbody id="archive-lap-list"></tbody></table>
         </div>
       </div>
       <button style="background:#333; color:#ff3d00;" onclick="clearArchive()">Svuota Archivio</button>
@@ -431,10 +674,16 @@
       <span>Archivio</span>
     </button>
   </nav>
+  <div id="print-sheet" class="print-sheet" aria-hidden="true"></div>
 
   <script>
     // --- DATI BASE ---
-    let riders = JSON.parse(localStorage.getItem('mx_riders_v2')) || ["Io"];
+    let riders = JSON.parse(localStorage.getItem('mx_riders_v2')) || [];
+    const ridersWithoutPlaceholder = riders.filter(rider => String(rider).trim().toLowerCase() !== 'io');
+    if (ridersWithoutPlaceholder.length !== riders.length) {
+      riders = ridersWithoutPlaceholder;
+      localStorage.setItem('mx_riders_v2', JSON.stringify(riders));
+    }
     let tracks = JSON.parse(localStorage.getItem('mx_tracks_v2')) || [
       { name: "Ottobiano", lapTimeSec: 115 },
       { name: "Dorno", lapTimeSec: 120 }
@@ -443,19 +692,13 @@
 
     let selectedDurationMin = 20;
     let currentRider = "";
+    let currentRider2 = "";
     let currentTrack = null;
     let alertTimeSec = 0;
-    let dynamicAlertTimeSec = 0;
 
-    // Timer Variables
+    // Timer condiviso: i piloti partono insieme, ma registrano i giri separatamente.
     let timerInterval = null;
-    let startTime = 0;
-    let elapsedTime = 0;
-    let isRunning = false;
-    let alertSounded = false;
-    let lastLapTime = 0;
-    let lapCounter = 0;
-    let lapTimesHistory = [];
+    let timerParticipants = [];
 
     // --- NAVIGAZIONE PAGINE ---
     function switchPage(pageId, btn) {
@@ -473,10 +716,18 @@
     // --- GESTIONE SETUP & DROP-DOWN ---
     function renderSetupDropdowns() {
       const rSelect = document.getElementById('setup-rider');
-      rSelect.innerHTML = riders.map(r => `<option value="${r}">${r}</option>`).join('');
-      
+      const r2Select = document.getElementById('setup-rider-2');
       const tSelect = document.getElementById('setup-track');
-      tSelect.innerHTML = tracks.map((t, i) => `<option value="${i}">${t.name} (${formatTimeSec(t.lapTimeSec)})</option>`).join('');
+      const previousRider = currentRider;
+      const previousRider2 = currentRider2;
+      const previousTrackName = currentTrack && currentTrack.name;
+      rSelect.innerHTML = '<option value="">Seleziona pilota</option>' + riders.map(r => `<option value="${r}">${r}</option>`).join('');
+      r2Select.innerHTML = '<option value="">Nessun secondo pilota</option>' + riders.map(r => `<option value="${r}">${r}</option>`).join('');
+      tSelect.innerHTML = tracks.map((track, index) => `<option value="${index}">${track.name}</option>`).join('');
+      rSelect.value = riders.includes(previousRider) ? previousRider : (riders[0] || '');
+      r2Select.value = riders.includes(previousRider2) && previousRider2 !== rSelect.value ? previousRider2 : '';
+      const previousTrackIndex = tracks.findIndex(track => track.name === previousTrackName);
+      tSelect.value = String(previousTrackIndex >= 0 ? previousTrackIndex : (tracks.length ? 0 : ''));
 
       updateSetupPreview();
     }
@@ -490,38 +741,59 @@
 
     function updateSetupPreview() {
       const rVal = document.getElementById('setup-rider').value;
+      const r2Select = document.getElementById('setup-rider-2');
+      if (r2Select.value && r2Select.value === rVal) r2Select.value = '';
+      const r2Val = r2Select.value;
       const tIdx = document.getElementById('setup-track').value;
 
       if (!rVal || tIdx === "" || !tracks[tIdx]) {
+        currentRider = "";
+        currentRider2 = "";
+        currentTrack = null;
+        alertTimeSec = 0;
         document.getElementById('calc-preview').innerHTML = "Seleziona un pilota e una pista valida.";
         return;
       }
 
       currentRider = rVal;
+      currentRider2 = r2Val;
       currentTrack = tracks[tIdx];
 
+      const pilotInfo = r2Val ? `Piloti: <b>${currentRider}</b> e <b>${currentRider2}</b>` : `Pilota: <b>${currentRider}</b>`;
       const totalMancheSec = selectedDurationMin * 60;
-      const estimatedLaps = Math.round(totalMancheSec / currentTrack.lapTimeSec);
-      const alertLap = estimatedLaps - 2;
-      alertTimeSec = Math.max(0, alertLap * currentTrack.lapTimeSec);
-      dynamicAlertTimeSec = alertTimeSec;
-
-      document.getElementById('calc-preview').innerHTML = `
-        Pilota: <b>${currentRider}</b> | Pista: <b>${currentTrack.name}</b><br>
-        Giri totali stimati: <b>~${estimatedLaps} giri</b><br>
-        Avviso -2 giri previsto a: <b style="color:var(--accent); font-size:1.1rem;">${formatTimeSec(alertTimeSec)}</b>
-      `;
+      const hasLapTimeReference = Number(currentTrack.lapTimeSec) > 0;
+      if (hasLapTimeReference) {
+        const estimatedLaps = Math.round(totalMancheSec / currentTrack.lapTimeSec);
+        const alertLap = estimatedLaps - 2;
+        alertTimeSec = Math.max(0, alertLap * currentTrack.lapTimeSec);
+        document.getElementById('calc-preview').innerHTML = `
+          ${pilotInfo} | Pista: <b>${currentTrack.name}</b><br>
+          Giri totali stimati: <b>~${estimatedLaps} giri</b><br>
+          Avviso -2 giri previsto a: <b style="color:var(--accent); font-size:1.1rem;">${formatTimeSec(alertTimeSec)}</b>
+        `;
+      } else {
+        alertTimeSec = 0;
+        document.getElementById('calc-preview').innerHTML = `
+          ${pilotInfo} | Pista: <b>${currentTrack.name}</b><br>
+          L'avviso -2 giri verrà calcolato automaticamente dopo i primi 2 giri cronometrati di ciascun pilota.
+        `;
+      }
     }
 
     function applySetupAndGoToTimer() {
-      if (!currentTrack) updateSetupPreview();
-
-      document.getElementById('live-session-info').textContent = `${currentRider} @ ${currentTrack.name} (${selectedDurationMin} MIN)`;
-      document.getElementById('target-alert-info').textContent = `Avviso -2 giri previsto a ${formatTimeSec(alertTimeSec)}`;
-      document.getElementById('dynamic-mode-badge').classList.add('hidden');
+      updateSetupPreview();
+      if (!currentRider || !currentTrack) {
+        alert("Aggiungi o seleziona almeno un pilota e scegli una pista.");
+        return;
+      }
 
       resetTimer();
-      // Naviga alla pagina Cronometro
+      timerParticipants = [currentRider, currentRider2].filter(Boolean).map(createTimerParticipant);
+      document.getElementById('live-session-info').textContent = `${currentRider}${currentRider2 ? ` + ${currentRider2}` : ""} @ ${currentTrack.name} (${selectedDurationMin} MIN)`;
+      document.getElementById('target-alert-info').textContent = alertTimeSec > 0
+        ? `Avviso -2 giri previsto a ${formatTimeSec(alertTimeSec)}; ogni pilota registra i propri passaggi.`
+        : "Avviso -2 giri calcolato automaticamente dopo i primi 2 giri di ciascun pilota.";
+      renderTimerParticipants();
       switchPage('timer', document.querySelectorAll('.nav-btn')[0]);
     }
 
@@ -538,12 +810,9 @@
 
     function addTrack() {
       const name = document.getElementById('new-track-name').value.trim();
-      const min = parseInt(document.getElementById('lap-min').value) || 0;
-      const sec = parseInt(document.getElementById('lap-sec').value) || 0;
-      const totalSec = (min * 60) + sec;
 
-      if (name && totalSec > 0) {
-        tracks.push({ name, lapTimeSec: totalSec });
+      if (name) {
+        tracks.push({ name });
         localStorage.setItem('mx_tracks_v2', JSON.stringify(tracks));
         document.getElementById('new-track-name').value = '';
         renderDataLists();
@@ -553,74 +822,150 @@
     function renderDataLists() {
       document.getElementById('riders-list-display').innerHTML = "<b>Piloti:</b> " + riders.join(', ');
       document.getElementById('tracks-list-display').innerHTML = "<b>Piste:</b><br>" + 
-        tracks.map(t => `• ${t.name} (${formatTimeSec(t.lapTimeSec)})`).join('<br>');
+        tracks.map(t => `• ${t.name}`).join('<br>');
     }
 
     // --- CRONOMETRO LIVE LOGIC ---
-    function toggleTimer() {
-      const mainBtn = document.getElementById('main-action-btn');
-      const lapBtn = document.getElementById('lap-btn');
+    function createTimerParticipant(rider) {
+      return {
+        rider,
+        elapsedTime: 0,
+        startTime: 0,
+        isRunning: false,
+        lastLapTime: 0,
+        lapCounter: 0,
+        lapTimesHistory: [],
+        alertTimeSec,
+        dynamicAlertTimeSec: alertTimeSec,
+        alertSounded: false
+      };
+    }
 
-      if (!isRunning) {
-        if (!currentTrack) {
-          alert("Prima imposta la manche dalla sezione Setup!");
-          switchPage('setup', document.querySelectorAll('.nav-btn')[1]);
-          return;
+    function renderTimerParticipants() {
+      const container = document.getElementById('timer-riders-container');
+      const isDual = timerParticipants.length === 2;
+      container.classList.toggle('dual', isDual);
+      if (timerParticipants.length === 0) {
+        container.innerHTML = '<div class="card" style="color:var(--text-sub);text-align:center;">Configura una manche e scegli uno o due piloti.</div>';
+        updateTimerControls();
+        return;
+      }
+
+      container.innerHTML = timerParticipants.map((participant, index) => `
+        <div class="card participant-card">
+          <h2>🏁 ${escapeHtml(participant.rider)}</h2>
+          <div class="participant-total-label">TEMPO TOTALE</div>
+          <div class="participant-timer-total" id="timer-total-${index}">${formatTimeMs(participant.elapsedTime)}</div>
+          <div class="timer-secondary">Giro attuale<strong id="current-lap-${index}">${formatTimeMs(participant.elapsedTime - participant.lastLapTime)}</strong></div>
+          <div class="participant-alert-info" id="participant-alert-${index}">${participant.dynamicAlertTimeSec > 0 ? `Avviso -2 giri previsto a ${formatTimeSec(participant.dynamicAlertTimeSec)}` : 'Avviso calcolato dopo i primi 2 giri'}</div>
+          ${isDual ? `<button class="big-btn participant-start-button ${participant.isRunning ? 'btn-stop' : 'btn-start'}" id="participant-start-${index}" onclick="toggleParticipantTimer(${index})">${participant.isRunning ? 'PAUSA / FERMA' : participant.elapsedTime > 0 ? 'RIPRENDI' : 'AVVIA'}</button>` : ''}
+          <button class="big-btn btn-lap participant-lap-button" onclick="recordLap(${index})" ${participant.isRunning ? '' : 'disabled'}>REGISTRA GIRO</button>
+          <h3>Giri completati: <span id="lap-count-${index}">${participant.lapCounter}</span></h3>
+          <table class="lap-table">
+            <thead><tr><th>Giro</th><th>Parziale</th><th>Delta</th><th>Totale</th></tr></thead>
+            <tbody id="lap-list-${index}"><tr><td colspan="4" style="color:var(--text-sub);">Avvia il cronometro e registra il primo giro.</td></tr></tbody>
+          </table>
+        </div>
+      `).join('');
+
+      timerParticipants.forEach((participant, index) => renderLapTable(participant, index));
+      updateTimerControls();
+    }
+
+    function updateTimerControls() {
+      const mainBtn = document.getElementById('main-action-btn');
+      const isDual = timerParticipants.length === 2;
+      mainBtn.classList.toggle('hidden', isDual);
+      if (!isDual && timerParticipants.length === 1) {
+        const participant = timerParticipants[0];
+        mainBtn.textContent = participant.isRunning ? "PAUSA / FERMA" : participant.elapsedTime > 0 ? "RIPRENDI / SALVA" : "AVVIA CRONOMETRO";
+        mainBtn.className = `big-btn ${participant.isRunning ? 'btn-stop' : 'btn-start'}`;
+      }
+      timerParticipants.forEach((participant, index) => {
+        const startBtn = document.getElementById(`participant-start-${index}`);
+        const lapBtn = document.querySelectorAll('.participant-lap-button')[index];
+        if (startBtn) {
+          startBtn.textContent = participant.isRunning ? "PAUSA / FERMA" : participant.elapsedTime > 0 ? "RIPRENDI" : "AVVIA";
+          startBtn.className = `big-btn participant-start-button ${participant.isRunning ? 'btn-stop' : 'btn-start'}`;
         }
-        startTime = Date.now() - elapsedTime;
-        timerInterval = setInterval(updateTimer, 100);
-        isRunning = true;
-        mainBtn.textContent = "PAUSA / FERMA";
-        mainBtn.className = "big-btn btn-stop";
-        lapBtn.classList.remove('hidden');
+        if (lapBtn) lapBtn.disabled = !participant.isRunning;
+      });
+    }
+
+    function toggleTimer() {
+      if (timerParticipants.length !== 1 || !currentTrack) {
+        alert("Prima imposta la manche e seleziona almeno un pilota dalla sezione Setup!");
+        switchPage('setup', document.querySelectorAll('.nav-btn')[1]);
+        return;
+      }
+      toggleParticipantTimer(0);
+    }
+
+    function toggleParticipantTimer(participantIndex) {
+      const participant = timerParticipants[participantIndex];
+      if (!participant || !currentTrack) return;
+
+      if (!participant.isRunning) {
+        participant.startTime = Date.now() - participant.elapsedTime;
+        participant.isRunning = true;
+        if (!timerInterval) timerInterval = setInterval(updateTimer, 100);
       } else {
-        clearInterval(timerInterval);
-        isRunning = false;
-        mainBtn.textContent = "RIPRENDI / SALVA";
-        mainBtn.className = "big-btn btn-start";
-        
-        // Se fermato con dei giri presi, salva l'archivio
-        if (lapCounter > 0 && confirm("Vuoi salvare questa manche nell'archivio?")) {
-          saveSessionToArchive();
+        participant.elapsedTime = Date.now() - participant.startTime;
+        participant.isRunning = false;
+        if (!timerParticipants.some(item => item.isRunning)) {
+          clearInterval(timerInterval);
+          timerInterval = null;
         }
+        const totalDisplay = document.getElementById(`timer-total-${participantIndex}`);
+        const lapDisplay = document.getElementById(`current-lap-${participantIndex}`);
+        if (totalDisplay) totalDisplay.textContent = formatTimeMs(participant.elapsedTime);
+        if (lapDisplay) lapDisplay.textContent = formatTimeMs(participant.elapsedTime - participant.lastLapTime);
+      }
+
+      updateTimerControls();
+      if (!participant.isRunning && participant.lapCounter > 0 && confirm(`Vuoi salvare la manche di ${participant.rider} nell'archivio?`)) {
+        saveSessionToArchive([participant]);
       }
     }
 
     function resetTimer() {
       clearInterval(timerInterval);
-      isRunning = false;
-      elapsedTime = 0;
-      lastLapTime = 0;
-      lapCounter = 0;
-      alertSounded = false;
-      lapTimesHistory = [];
-
-      document.getElementById('timer-display').textContent = "00:00.0";
-      document.getElementById('lap-count').textContent = "0";
-      document.getElementById('lap-list').innerHTML = '<tr><td colspan="4" style="color:var(--text-sub);">Avvia la manche e premi "GIRO"</td></tr>';
+      timerInterval = null;
+      timerParticipants = timerParticipants.map(participant => createTimerParticipant(participant.rider));
       document.getElementById('alert-box').style.display = "none";
-      
-      const mainBtn = document.getElementById('main-action-btn');
-      mainBtn.textContent = "AVVIA CRONOMETRO";
-      mainBtn.className = "big-btn btn-start";
-      document.getElementById('lap-btn').classList.add('hidden');
+      updateTimerControls();
+      renderTimerParticipants();
+    }
+
+    function resetTimerWithConfirmation() {
+      const hasProgress = timerParticipants.some(participant => participant.isRunning || participant.elapsedTime > 0 || participant.lapCounter > 0);
+      if (hasProgress && !confirm("Vuoi azzerare i cronometri e cancellare i giri visualizzati di tutti i piloti?")) return;
+      resetTimer();
     }
 
     function updateTimer() {
-      elapsedTime = Date.now() - startTime;
-      document.getElementById('timer-display').textContent = formatTimeMs(elapsedTime);
+      const now = Date.now();
+      timerParticipants.forEach((participant, index) => {
+        if (!participant.isRunning) return;
+        participant.elapsedTime = now - participant.startTime;
+        const totalDisplay = document.getElementById(`timer-total-${index}`);
+        const lapDisplay = document.getElementById(`current-lap-${index}`);
+        if (totalDisplay) totalDisplay.textContent = formatTimeMs(participant.elapsedTime);
+        if (lapDisplay) lapDisplay.textContent = formatTimeMs(participant.elapsedTime - participant.lastLapTime);
 
-      const currentSec = elapsedTime / 1000;
-      const targetSec = dynamicAlertTimeSec > 0 ? dynamicAlertTimeSec : alertTimeSec;
-
-      if (currentSec >= targetSec && targetSec > 0 && !alertSounded) {
-        alertSounded = true;
-        triggerAlert();
-      }
+        const currentSec = participant.elapsedTime / 1000;
+        const targetSec = participant.lapCounter >= 2 ? participant.dynamicAlertTimeSec : participant.alertTimeSec;
+        if (currentSec >= targetSec && targetSec > 0 && !participant.alertSounded) {
+          participant.alertSounded = true;
+          triggerAlert(participant.rider);
+        }
+      });
     }
 
-    function triggerAlert() {
-      document.getElementById('alert-box').style.display = "block";
+    function triggerAlert(rider) {
+      const alertBox = document.getElementById('alert-box');
+      alertBox.textContent = `🚨 ${rider}: CARTELLO -2 GIRI ORA! 🚨`;
+      alertBox.style.display = "block";
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -632,111 +977,230 @@
       } catch(e) {}
     }
 
-    // REGISTRAZIONE GIRO CON CALCOLO DINAMICO, BEST LAP E DELTA
-    function recordLap() {
-      if (!isRunning) return;
+    function recordLap(participantIndex) {
+      const participant = timerParticipants[participantIndex];
+      if (!participant || !participant.isRunning) return;
 
-      lapCounter++;
-      const currentLapDuration = elapsedTime - lastLapTime;
-      lastLapTime = elapsedTime;
+      participant.elapsedTime = Date.now() - participant.startTime;
+      participant.lapCounter++;
+      const currentLapDuration = participant.elapsedTime - participant.lastLapTime;
+      participant.lastLapTime = participant.elapsedTime;
+      participant.lapTimesHistory.push({ lap: participant.lapCounter, duration: currentLapDuration, total: participant.elapsedTime });
 
-      lapTimesHistory.push({ lap: lapCounter, duration: currentLapDuration, total: elapsedTime });
-      document.getElementById('lap-count').textContent = lapCounter;
+      const countDisplay = document.getElementById(`lap-count-${participantIndex}`);
+      const lapDisplay = document.getElementById(`current-lap-${participantIndex}`);
+      if (countDisplay) countDisplay.textContent = participant.lapCounter;
+      if (lapDisplay) lapDisplay.textContent = "00:00.0";
 
-      // 1. Ricalcolo Dinamico Media
-      if (lapCounter >= 2) {
-        const sumDuration = lapTimesHistory.reduce((a, b) => a + b.duration, 0);
-        const avgLapSec = (sumDuration / lapCounter) / 1000;
-        const totalMancheSec = selectedDurationMin * 60;
-        const estTotalLaps = Math.round(totalMancheSec / avgLapSec);
-        const alertLap = estTotalLaps - 2;
-
-        dynamicAlertTimeSec = Math.max(0, alertLap * avgLapSec);
-
-        document.getElementById('target-alert-info').textContent = `Avviso Ricalcolato a ${formatTimeSec(dynamicAlertTimeSec)} (Media: ${formatTimeSec(avgLapSec)})`;
-        document.getElementById('dynamic-mode-badge').classList.remove('hidden');
+      if (participant.lapCounter >= 2) {
+        const sumDuration = participant.lapTimesHistory.reduce((sum, lap) => sum + lap.duration, 0);
+        const avgLapSec = (sumDuration / participant.lapCounter) / 1000;
+        const estimatedLaps = Math.round((selectedDurationMin * 60) / avgLapSec);
+        const alertLap = estimatedLaps - 2;
+        participant.dynamicAlertTimeSec = Math.max(0, alertLap * avgLapSec);
+        const info = document.getElementById(`participant-alert-${participantIndex}`);
+        if (info) info.textContent = `Avviso ricalcolato a ${formatTimeSec(participant.dynamicAlertTimeSec)} sulla media reale`;
       }
 
-      renderLapTable();
+      renderLapTable(participant, participantIndex);
     }
 
-    function renderLapTable() {
-      const minDuration = Math.min(...lapTimesHistory.map(l => l.duration));
-      const tbody = document.getElementById('lap-list');
-      tbody.innerHTML = "";
+    function renderLapTable(participant, participantIndex) {
+      const tbody = document.getElementById(`lap-list-${participantIndex}`);
+      if (!tbody) return;
+      if (participant.lapTimesHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-sub);">Avvia la manche e registra il primo giro.</td></tr>';
+        return;
+      }
 
-      lapTimesHistory.slice().reverse().forEach((l, index) => {
-        const actualIndex = lapTimesHistory.length - 1 - index;
-        const isBest = l.duration === minDuration;
-
-        // Delta
-        let deltaHtml = "-";
+      const minDuration = Math.min(...participant.lapTimesHistory.map(lap => lap.duration));
+      tbody.innerHTML = '';
+      participant.lapTimesHistory.slice().reverse().forEach((lap, reverseIndex) => {
+        const actualIndex = participant.lapTimesHistory.length - 1 - reverseIndex;
+        const isBest = lap.duration === minDuration;
+        let deltaHtml = "—";
         if (actualIndex > 0) {
-          const prevDuration = lapTimesHistory[actualIndex - 1].duration;
-          const diffMs = l.duration - prevDuration;
-          const diffSec = (diffMs / 1000).toFixed(1);
-
-          if (diffMs < 0) {
-            deltaHtml = `<span style="color:var(--green-perf);" class="delta-text">${diffSec}s</span>`;
-          } else if (diffMs > 0) {
-            deltaHtml = `<span style="color:var(--red-perf);" class="delta-text">+${diffSec}s</span>`;
-          } else {
-            deltaHtml = `<span style="color:var(--text-sub);" class="delta-text">0.0s</span>`;
-          }
+          const previousDuration = participant.lapTimesHistory[actualIndex - 1].duration;
+          const diffMs = lap.duration - previousDuration;
+          const diffSec = (Math.abs(diffMs) / 1000).toFixed(1);
+          const sign = diffMs > 0 ? "+" : diffMs < 0 ? "−" : "";
+          const color = diffMs < 0 ? "var(--green-perf)" : diffMs > 0 ? "var(--red-perf)" : "var(--text-sub)";
+          deltaHtml = `<span style="color:${color};" class="delta-text">${sign}${diffSec}s</span>`;
         }
 
-        // Color Performance
         let badgeClass = "perf-avg";
         if (isBest) badgeClass = "perf-best";
-        else if (actualIndex > 0 && l.duration < lapTimesHistory[actualIndex - 1].duration) badgeClass = "perf-good";
-        else if (actualIndex > 0 && l.duration > lapTimesHistory[actualIndex - 1].duration + 3000) badgeClass = "perf-poor";
+        else if (actualIndex > 0 && lap.duration < participant.lapTimesHistory[actualIndex - 1].duration) badgeClass = "perf-good";
+        else if (actualIndex > 0 && lap.duration > participant.lapTimesHistory[actualIndex - 1].duration + 3000) badgeClass = "perf-poor";
 
         const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>Giro ${l.lap}</td>
-          <td><span class="badge-perf ${badgeClass}">${formatTimeMs(l.duration)}</span></td>
-          <td>${deltaHtml}</td>
-          <td style="color:var(--text-sub);">${formatTimeMs(l.total)}</td>
-        `;
+        row.innerHTML = `<td>Giro ${lap.lap}</td><td><span class="badge-perf ${badgeClass}">${formatTimeMs(lap.duration)}</span></td><td>${deltaHtml}</td><td style="color:var(--text-sub);">${formatTimeMs(lap.total)}</td>`;
         tbody.appendChild(row);
       });
     }
 
     // --- ARCHIVIO ---
-    function saveSessionToArchive() {
-      const sessionData = {
-        date: new Date().toLocaleDateString('it-IT') + " " + new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}),
-        rider: currentRider,
-        track: currentTrack.name,
-        durationMin: selectedDurationMin,
-        totalLaps: lapCounter,
-        totalTime: formatTimeMs(elapsedTime),
-        laps: lapTimesHistory
-      };
-
-      archive.unshift(sessionData);
+    function saveSessionToArchive(participantsToSave) {
+      const now = new Date();
+      const localDateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const dateLabel = now.toLocaleDateString('it-IT');
+      const timeLabel = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      participantsToSave.filter(participant => participant.lapCounter > 0).forEach(participant => {
+        archive.unshift({
+          date: `${dateLabel} ${timeLabel}`,
+          dateKey: localDateKey,
+          rider: participant.rider,
+          track: currentTrack.name,
+          durationMin: selectedDurationMin,
+          totalLaps: participant.lapCounter,
+          totalTime: formatTimeMs(participant.elapsedTime),
+          laps: participant.lapTimesHistory.map(lap => ({ ...lap }))
+        });
+      });
       localStorage.setItem('mx_archive_v2', JSON.stringify(archive));
       alert("Manche salvata con successo nell'Archivio!");
     }
 
+    function archiveDateInfo(item) {
+      const dateLabel = String(item.date || "Data sconosciuta").split(' ')[0];
+      let dateKey = item.dateKey;
+      if (!dateKey) {
+        const match = dateLabel.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        dateKey = match ? `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}` : dateLabel;
+      }
+      return { dateKey, dateLabel };
+    }
+
     function renderArchive() {
       const container = document.getElementById('archive-list');
+      document.getElementById('archive-detail').classList.add('hidden');
+      container.classList.remove('hidden');
       if (archive.length === 0) {
         container.innerHTML = '<div style="color: var(--text-sub); font-size:0.9rem;">Nessuna manche salvata.</div>';
         return;
       }
 
-      container.innerHTML = archive.map((item, idx) => `
-        <div class="archive-item">
-          <div class="archive-header">
-            <span class="archive-title">${item.rider} @ ${item.track}</span>
-            <span class="archive-sub">${item.date}</span>
+      const tracksByName = new Map();
+      archive.forEach((item, index) => {
+        const trackName = item.track || "Pista senza nome";
+        if (!tracksByName.has(trackName)) tracksByName.set(trackName, []);
+        tracksByName.get(trackName).push({ item, index });
+      });
+
+      container.innerHTML = Array.from(tracksByName.entries()).map(([trackName, sessions]) => {
+        const dates = new Map();
+        sessions.forEach(session => {
+          const dateInfo = archiveDateInfo(session.item);
+          if (!dates.has(dateInfo.dateKey)) dates.set(dateInfo.dateKey, { label: dateInfo.dateLabel, sessions: [] });
+          dates.get(dateInfo.dateKey).sessions.push(session);
+        });
+
+        const dateGroups = Array.from(dates.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+        const sessionCount = sessions.length;
+        const dateMarkup = dateGroups.map(([, group]) => `
+          <div class="archive-date-group">
+            <div class="archive-date-title">📅 ${escapeHtml(group.label)}</div>
+            ${group.sessions.map(({ item, index }) => `
+              <div class="archive-item">
+                <div class="archive-header">
+                  <span class="archive-title">${escapeHtml(item.rider || "Pilota")}</span>
+                  <span class="archive-sub">${escapeHtml((item.date || "").split(' ').slice(1).join(' '))}</span>
+                </div>
+                <div style="font-size:0.85rem; margin-top:5px; color:var(--text-sub);">
+                  Manche ${escapeHtml(item.durationMin ?? "—")} min | Giri: <b>${escapeHtml(item.totalLaps ?? 0)}</b> | Tempo: <b>${escapeHtml(item.totalTime || "—")}</b>
+                </div>
+                <div class="archive-session-actions">
+                  <button class="btn-accent" onclick="openArchiveSession(${index})">Consulta</button>
+                  <button class="btn-print" onclick="printArchiveSession(${index})">Stampa PDF</button>
+                </div>
+              </div>
+            `).join('')}
           </div>
-          <div style="font-size: 0.85rem; margin-top: 5px; color: var(--text-sub);">
-            Manche ${item.durationMin} Min | Giri: <b>${item.totalLaps}</b> | Tempo: <b>${item.totalTime}</b>
+        `).join('');
+
+        return `<details class="archive-folder"><summary>📁 ${escapeHtml(trackName)}<span class="archive-folder-count">${sessionCount} manche</span></summary>${dateMarkup}</details>`;
+      }).join('');
+    }
+
+    function openArchiveSession(index) {
+      const session = archive[index];
+      if (!session) return;
+
+      document.getElementById('archive-list').classList.add('hidden');
+      document.getElementById('archive-detail').classList.remove('hidden');
+      document.getElementById('archive-session-title').textContent = `${session.rider || "Pilota"} @ ${session.track || "Pista"}`;
+      document.getElementById('archive-session-meta').textContent = `${session.date || "Data sconosciuta"} · Manche ${session.durationMin ?? "—"} min · ${session.totalLaps ?? 0} giri · Totale ${session.totalTime || "—"}`;
+
+      const tbody = document.getElementById('archive-lap-list');
+      const laps = Array.isArray(session.laps) ? session.laps : [];
+      if (laps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-sub);">Nessun dettaglio giro salvato.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = laps.map((lap, index) => {
+        const previousDuration = index > 0 ? Number(laps[index - 1].duration) : null;
+        const diffMs = previousDuration === null ? null : Number(lap.duration) - previousDuration;
+        const delta = diffMs === null ? '—' : `${diffMs > 0 ? '+' : ''}${(diffMs / 1000).toFixed(1)}s`;
+        const deltaColor = diffMs === null ? 'var(--text-sub)' : diffMs < 0 ? 'var(--green-perf)' : diffMs > 0 ? 'var(--red-perf)' : 'var(--text-sub)';
+        return `<tr><td>Giro ${escapeHtml(lap.lap ?? index + 1)}</td><td>${formatTimeMs(Number(lap.duration) || 0)}</td><td style="color:${deltaColor};">${delta}</td><td style="color:var(--text-sub);">${formatTimeMs(Number(lap.total) || 0)}</td></tr>`;
+      }).join('');
+    }
+
+    function printArchiveSession(index) {
+      const session = archive[index];
+      if (!session) return;
+
+      const laps = Array.isArray(session.laps) ? session.laps : [];
+      const durations = laps.map(lap => Number(lap.duration)).filter(duration => Number.isFinite(duration) && duration >= 0);
+      const bestLap = durations.length ? Math.min(...durations) : null;
+      const averageLap = durations.length ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length : null;
+      let fallbackTotal = 0;
+      const lapRows = laps.map((lap, lapIndex) => {
+        const duration = Number(lap.duration) || 0;
+        const lapTotal = Number.isFinite(Number(lap.total)) ? Number(lap.total) : (fallbackTotal += duration);
+        const previousDuration = lapIndex > 0 ? Number(laps[lapIndex - 1].duration) : null;
+        const deltaMs = previousDuration === null ? null : duration - previousDuration;
+        const delta = deltaMs === null ? "—" : `${deltaMs > 0 ? "+" : deltaMs < 0 ? "−" : ""}${(Math.abs(deltaMs) / 1000).toFixed(1)} s`;
+        const bestBadge = duration === bestLap ? '<span class="pdf-best">BEST LAP</span>' : '';
+        return `<tr><td>${escapeHtml(lap.lap ?? lapIndex + 1)}</td><td>${formatTimeMs(duration)}${bestBadge}</td><td>${delta}</td><td>${formatTimeMs(lapTotal)}</td></tr>`;
+      }).join('');
+
+      const dateLabel = String(session.date || "Data non disponibile");
+      const printSheet = document.getElementById('print-sheet');
+      printSheet.setAttribute('aria-hidden', 'false');
+      printSheet.innerHTML = `
+        <article class="pdf-page">
+          <div class="pdf-topbar">
+            <div class="pdf-emblem">MX</div>
+            <div class="pdf-brand">MX CHRONO <span>PRO</span><small>TRACKSIDE · RACE CONTROL</small></div>
+            <div class="pdf-report-tag">RACE REPORT</div>
           </div>
-        </div>
-      `).join('');
+          <div class="pdf-accent-line"></div>
+          <section class="pdf-heading">
+            <div class="pdf-heading-kicker">REPORT MANCHE · ${escapeHtml(dateLabel)}</div>
+            <h1>${escapeHtml(session.track || "Pista")}</h1>
+            <p>Pilota: <strong>${escapeHtml(session.rider || "Pilota")}</strong> · Durata manche: ${escapeHtml(session.durationMin ?? "—")} min</p>
+          </section>
+          <section class="pdf-stats">
+            <div class="pdf-stat"><span>Tempo totale</span><strong>${escapeHtml(session.totalTime || "—")}</strong></div>
+            <div class="pdf-stat"><span>Giri completati</span><strong>${escapeHtml(session.totalLaps ?? laps.length)}</strong></div>
+            <div class="pdf-stat"><span>Miglior giro</span><strong>${bestLap === null ? "—" : formatTimeMs(bestLap)}</strong></div>
+          </section>
+          <section>
+            <h2 class="pdf-section-title">Dettaglio giri</h2>
+            ${lapRows ? `<table class="pdf-lap-table"><thead><tr><th>Giro</th><th>Parziale</th><th>Delta</th><th>Tempo cumulativo</th></tr></thead><tbody>${lapRows}</tbody></table>` : '<div class="pdf-empty">Questa manche non contiene giri registrati.</div>'}
+          </section>
+          <footer class="pdf-footer"><span>MX CHRONO PRO · TRACKSIDE TIMING</span><span>Media giro: ${averageLap === null ? "—" : formatTimeMs(averageLap)}</span></footer>
+        </article>
+      `;
+      window.print();
+      printSheet.setAttribute('aria-hidden', 'true');
+    }
+
+    function returnToArchiveList() {
+      document.getElementById('archive-detail').classList.add('hidden');
+      document.getElementById('archive-list').classList.remove('hidden');
     }
 
     function clearArchive() {
@@ -748,6 +1212,12 @@
     }
 
     // --- UTILITIES ---
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
     function formatTimeSec(seconds) {
       const m = Math.floor(seconds / 60);
       const s = Math.floor(seconds % 60);
@@ -764,6 +1234,7 @@
 
     // INIT
     renderSetupDropdowns();
+    renderTimerParticipants();
   </script>
 </body>
 </html>
